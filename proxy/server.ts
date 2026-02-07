@@ -53,6 +53,7 @@ async function runProver(circuit: string, inputJson: string): Promise<{ proof: s
     const { stdout, stderr } = await execFileAsync('cargo', args, {
       cwd: PROJECT_DIR,
       timeout: 600_000, // 10 minutes
+      maxBuffer: 50 * 1024 * 1024, // 50MB for large proof output logs
       env: { ...process.env },
     });
 
