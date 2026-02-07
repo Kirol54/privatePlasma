@@ -4,6 +4,8 @@
 
 -include .env
 
+FIXTURES := fixtures
+
 # ---------- Build ----------
 
 .PHONY: build-circuits build-host build-contracts build-client build-all
@@ -34,6 +36,7 @@ test-lib: ## Run Rust shared library tests
 	cargo test -p shielded-pool-lib
 
 test-integration: ## Run Rust integration tests
+	@mkdir -p $(FIXTURES)
 	cargo test -p shielded-pool-tests
 
 test-all: test-contracts test-lib test-integration ## Run all tests
@@ -70,13 +73,13 @@ deploy-plasma: ## Deploy to Plasma network (uses .env)
 
 execute-transfer: ## Execute transfer circuit (no proof, fast verification)
 	SP1_PROVER=mock cargo run --release -p shielded-pool-script -- \
-		transfer --input /tmp/test_transfer_input.json \
-		--output /tmp/test_output.json --execute-only
+		transfer --input $(FIXTURES)/test_transfer_input.json \
+		--output $(FIXTURES)/test_output.json --execute-only
 
 execute-withdraw: ## Execute withdraw circuit (no proof, fast verification)
 	SP1_PROVER=mock cargo run --release -p shielded-pool-script -- \
-		withdraw --input /tmp/test_withdraw_input.json \
-		--output /tmp/test_output.json --execute-only
+		withdraw --input $(FIXTURES)/test_withdraw_input.json \
+		--output $(FIXTURES)/test_output.json --execute-only
 
 prove-transfer: ## Generate real Groth16 transfer proof (via Succinct Network)
 	@test -n "$(SP1_PRIVATE_KEY)" || (echo "Error: SP1_PRIVATE_KEY not set." && exit 1)

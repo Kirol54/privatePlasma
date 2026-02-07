@@ -17,5 +17,8 @@ client/dist/
 programs/transfer/elf/
 programs/withdraw/elf/
 
+# Test fixtures (generated)
+fixtures/
+
 # OS
 .DS_Store

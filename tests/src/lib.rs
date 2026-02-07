@@ -85,11 +85,18 @@ mod tests {
         }
     }
 
+    fn fixtures_dir() -> std::path::PathBuf {
+        let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let dir = workspace_root.join("fixtures");
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
     #[test]
     fn test_transfer_inputs_serialize_json() {
         let inputs = build_transfer_test_inputs();
         let json = serde_json::to_string_pretty(&inputs).unwrap();
-        std::fs::write("/tmp/test_transfer_input.json", &json).unwrap();
+        std::fs::write(fixtures_dir().join("test_transfer_input.json"), &json).unwrap();
         let parsed: TransferPrivateInputs = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.input_notes[0].amount, 700_000);
         assert_eq!(parsed.output_notes[0].amount, 500_000);
@@ -99,7 +106,7 @@ mod tests {
     fn test_withdraw_inputs_serialize_json() {
         let inputs = build_withdraw_test_inputs();
         let json = serde_json::to_string_pretty(&inputs).unwrap();
-        std::fs::write("/tmp/test_withdraw_input.json", &json).unwrap();
+        std::fs::write(fixtures_dir().join("test_withdraw_input.json"), &json).unwrap();
         let parsed: WithdrawPrivateInputs = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.input_note.amount, 1_000_000);
         assert_eq!(parsed.withdraw_amount, 600_000);
