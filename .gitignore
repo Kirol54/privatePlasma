@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Foundry
+out/
+cache/
+broadcast/
+
+# Rust
+target/
+
+# Node
+node_modules/
+client/dist/
+
+# SP1
+programs/transfer/elf/
+programs/withdraw/elf/
+
+# OS
+.DS_Store
