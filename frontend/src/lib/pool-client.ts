@@ -375,8 +375,23 @@ export class BrowserPoolClient {
       onProgress?.({ stage: 'confirming', message: 'Waiting for confirmation...', txHash: tx2.hash });
       const receipt = await tx2.wait();
 
-      // 5. Track locally
-      const leafIndex = this.tree.insert(commitment);
+      // 5. Re-sync tree from chain so local state matches on-chain
+      await this.sync();
+
+      // Parse leafIndex from the Deposit event in the receipt
+      const depositLog = receipt.logs.find((log: any) => {
+        try {
+          return this.pool.interface.parseLog({ topics: log.topics as string[], data: log.data })?.name === 'Deposit';
+        } catch { return false; }
+      });
+      let leafIndex: number;
+      if (depositLog) {
+        const parsed = this.pool.interface.parseLog({ topics: depositLog.topics as string[], data: depositLog.data });
+        leafIndex = Number(parsed!.args[2]); // leafIndex is the 3rd arg (uint32)
+      } else {
+        // Fallback: our deposit is the last leaf
+        leafIndex = this.tree.nextIndex - 1;
+      }
       this.wallet.addNote(note, leafIndex);
 
       onProgress?.({ stage: 'done', message: 'Deposit complete!', txHash: receipt.hash });
@@ -396,6 +411,10 @@ export class BrowserPoolClient {
     onProgress?: (progress: TxProgress) => void
   ): Promise<TransactionReceipt> {
     try {
+      // 0. Sync tree to get accurate root before generating proof
+      onProgress?.({ stage: 'approving', message: 'Syncing Merkle tree...' });
+      await this.sync();
+
       // 1. Select input notes
       const { inputs, change } = this.wallet.selectNotes(amount);
 
@@ -466,6 +485,10 @@ export class BrowserPoolClient {
     onProgress?: (progress: TxProgress) => void
   ): Promise<TransactionReceipt> {
     try {
+      // 0. Sync tree to get accurate root before generating proof
+      onProgress?.({ stage: 'approving', message: 'Syncing Merkle tree...' });
+      await this.sync();
+
       // 1. Find a note that covers the amount
       const spendable = this.wallet.getSpendableNotes();
       const inputNote = spendable.find((n) => n.amount >= amount);
