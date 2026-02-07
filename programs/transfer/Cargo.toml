@@ -1,0 +1,11 @@
+[package]
+name = "transfer-program"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+sp1-zkvm = "5.0.0"
+shielded-pool-lib = { path = "../../lib" }
+serde = { version = "1.0", default-features = false, features = ["derive"] }

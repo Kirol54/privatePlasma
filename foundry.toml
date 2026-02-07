@@ -1,0 +1,8 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["foundry-lib"]
+test = "test"
+script = "deploy"
+solc = "0.8.28"
+fs_permissions = [{ access = "read", path = ".env" }]
