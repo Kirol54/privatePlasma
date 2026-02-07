@@ -17,7 +17,7 @@ import {
   hexToBytes,
   randomBytes,
 } from './browser-crypto';
-import { ClientMerkleTree } from '../../../client/src/merkle.js';
+import { ClientMerkleTree, verifyMerkleProof } from '../../../client/src/merkle.js';
 import { encryptNote, deriveViewingKeypair } from '../../../client/src/encryption.js';
 import { proveTransfer, proveWithdraw } from './browser-prover';
 import { config } from '../config';
@@ -503,6 +503,29 @@ export class BrowserPoolClient {
       // 3. Get Merkle proof
       const root = this.tree.getRoot();
       const merkleProof = this.tree.getProof(inputNote.leafIndex);
+
+      // 3.5 Local verification — catch mismatches before wasting proof time
+      const localCommitment = computeCommitment(inputNote.amount, inputNote.pubkey, inputNote.blinding);
+      const treeLeaf = this.tree.leaves[inputNote.leafIndex];
+      console.log('[withdraw] Debug info:');
+      console.log('  Tree leaves:', this.tree.nextIndex);
+      console.log('  Note leafIndex:', inputNote.leafIndex);
+      console.log('  Note commitment:', bytesToHex(localCommitment));
+      console.log('  Tree leaf at idx:', treeLeaf ? bytesToHex(treeLeaf) : 'MISSING');
+      console.log('  Root:', bytesToHex(root));
+      console.log('  Commitments match:', treeLeaf ? bytesToHex(localCommitment) === bytesToHex(treeLeaf) : false);
+
+      const proofValid = verifyMerkleProof(localCommitment, merkleProof, root);
+      console.log('  Local proof verification:', proofValid);
+
+      if (!proofValid) {
+        throw new Error(
+          `Merkle proof verification failed locally! ` +
+          `leafIndex=${inputNote.leafIndex}, ` +
+          `treeLeaves=${this.tree.nextIndex}, ` +
+          `commitmentMatch=${treeLeaf ? bytesToHex(localCommitment) === bytesToHex(treeLeaf) : false}`
+        );
+      }
 
       // 4. Generate proof via proxy
       onProgress?.({ stage: 'proving', message: 'Generating ZK proof... (this may take a few minutes)' });
