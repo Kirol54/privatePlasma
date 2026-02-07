@@ -111,6 +111,10 @@ async fn main() -> Result<()> {
     let tree_levels: usize = std::env::var("TREE_LEVELS")
         .unwrap_or_else(|_| "20".to_string())
         .parse()?;
+    let deploy_block: u64 = std::env::var("DEPLOY_BLOCK")
+        .unwrap_or_else(|_| "0".to_string())
+        .parse()
+        .context("DEPLOY_BLOCK must be a number")?;
 
     // Amounts (USDT, 6 decimals)
     let deposit_a = parse_usdt(
@@ -240,7 +244,7 @@ async fn main() -> Result<()> {
     let mut tree = IncrementalMerkleTree::new(tree_levels);
 
     // Replay all past deposits to build tree state
-    let filter = pool.Deposit_filter().from_block(0);
+    let filter = pool.Deposit_filter().from_block(deploy_block);
     let logs = filter.query().await?;
     println!("    Found {} total deposit events", logs.len());
 

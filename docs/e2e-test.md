@@ -50,6 +50,7 @@ cp .env.example .env
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DEPLOY_BLOCK` | `0` | Block the ShieldedPool was deployed at (auto-set by `make deploy-plasma`) |
 | `TREE_LEVELS` | `20` | Merkle tree depth (must match deployment) |
 | `DEPOSIT_A` | `0.7` | First deposit amount in USDT |
 | `DEPOSIT_B` | `0.3` | Second deposit amount in USDT |
@@ -156,7 +157,7 @@ openssl rand -hex 32
 
 ### Merkle Tree Mirroring
 
-The script maintains a local copy of the on-chain Merkle tree by replaying all `Deposit` events from block 0. After inserting all commitments, it asserts the local root matches `getLastRoot()`. This ensures Merkle proofs generated locally will be accepted on-chain.
+The script maintains a local copy of the on-chain Merkle tree by replaying all `Deposit` events starting from `DEPLOY_BLOCK` (auto-saved to `.env` by `make deploy-plasma`). After inserting all commitments, it asserts the local root matches `getLastRoot()`. This ensures Merkle proofs generated locally will be accepted on-chain.
 
 After each operation (transfer, withdraw), the script inserts the new output commitments into the local tree and re-verifies the root.
 
@@ -199,7 +200,7 @@ sol! {
 
 | Problem | Fix |
 |---------|-----|
-| `Root mismatch!` | Your local tree diverged from on-chain state. Make sure no one else deposited between your deposits and the tree replay. |
+| `Root mismatch!` | Your local tree diverged from on-chain state. Check that `DEPLOY_BLOCK` in `.env` matches the actual deployment block. |
 | `SP1_PRIVATE_KEY not set` | Add your Succinct API key to `.env` |
 | `POOL_ADDRESS not set` | Deploy the contract first (`make deploy-plasma`) and put the address in `.env` |
 | Proof generation hangs | Check your Succinct dashboard at [network.succinct.xyz](https://network.succinct.xyz) for proof status |
