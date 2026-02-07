@@ -64,9 +64,8 @@ deploy-plasma: ## Deploy to Plasma network (uses .env)
 	@test -n "$(RPC_URL)" || (echo "Error: RPC_URL not set. Copy .env.example to .env and configure it." && exit 1)
 	forge script deploy/Deploy.s.sol \
 		--rpc-url $(RPC_URL) \
-		--broadcast \
-		--verify
-
+		--broadcast 
+		
 # ---------- Prove ----------
 
 .PHONY: prove-transfer prove-withdraw execute-transfer execute-withdraw
@@ -92,6 +91,16 @@ prove-withdraw: ## Generate real Groth16 withdraw proof (via Succinct Network)
 	SP1_PROVER=network SP1_PRIVATE_KEY=$(SP1_PRIVATE_KEY) \
 		cargo run --release -p shielded-pool-script -- \
 		withdraw --input $(INPUT) --output $(OUTPUT)
+
+# ---------- E2E ----------
+
+.PHONY: e2e
+
+e2e: ## Run full e2e test (deposit → transfer → withdraw) against deployed contract
+	@test -n "$(POOL_ADDRESS)" || (echo "Error: POOL_ADDRESS not set in .env" && exit 1)
+	@test -n "$(SP1_PRIVATE_KEY)" || (echo "Error: SP1_PRIVATE_KEY not set." && exit 1)
+	SP1_PROVER=network SP1_PRIVATE_KEY=$(SP1_PRIVATE_KEY) \
+		cargo run --release -p shielded-pool-script --bin e2e
 
 # ---------- Help ----------
 

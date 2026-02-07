@@ -70,7 +70,7 @@ Both circuits compile to RISC-V and run inside the SP1 zkVM. Proofs are Groth16 
 ## Prerequisites
 
 - **Rust** (stable)
-- **SP1 toolchain**: `curl -L https://sp1.succinct.xyz | bash && sp1up`
+- **SP1 toolchain**: `curl -L https://sp1.succinct.xyz | bash && sp1up --version 5.2.4`
 - **Foundry**: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 - **Node.js** >= 18
 
@@ -155,10 +155,11 @@ console.log("Balance:", wallet.getBalance());
 
 | Crate | Version | Purpose |
 |-------|---------|---------|
-| `sp1-sdk` | 4.1.7 | SP1 prover host SDK |
-| `sp1-zkvm` | 4.1.7 | SP1 guest VM (RISC-V) |
+| `sp1-sdk` | 5.2.4 | SP1 prover host SDK |
+| `sp1-zkvm` | 5.2.4 | SP1 guest VM (RISC-V) |
 | `tiny-keccak` | 2.0 | Keccak256 (no_std) |
-| `serde` | =1.0.217 | Serialization (pinned for compatibility) |
+| `serde` | 1.0 | Serialization |
+| `alloy` | 1.4 | Ethereum provider, signers, contract bindings |
 | `clap` | 4 | CLI argument parsing |
 
 ### TypeScript
@@ -217,7 +218,7 @@ make deploy-local
 make deploy-plasma
 ```
 
-The deploy script prints the deployed `ShieldedPool` address. Use it to configure the TypeScript SDK.
+The deploy script prints the deployed `ShieldedPool` address. Save it to `POOL_ADDRESS` in your `.env`.
 
 ### All Makefile targets
 
@@ -225,8 +226,35 @@ The deploy script prints the deployed `ShieldedPool` address. Use it to configur
 make help
 ```
 
+## End-to-End Test
+
+Run the full deposit → private transfer → withdraw lifecycle against a deployed contract with real Groth16 proofs:
+
+```bash
+# 1. Ensure .env has POOL_ADDRESS, PRIVATE_KEY, SP1_PRIVATE_KEY, etc.
+# 2. Run the E2E flow:
+make e2e
+```
+
+This generates two real ZK proofs via the Succinct Prover Network (~2–5 min each), submits them on-chain, and verifies final state (nullifiers, Merkle root, balances).
+
+### Configurable amounts
+
+Set these in `.env` to customise the test flow (defaults shown):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEPOSIT_A` | `0.7` | First deposit (USDT) |
+| `DEPOSIT_B` | `0.3` | Second deposit (USDT) |
+| `TRANSFER_AMOUNT` | `0.5` | Private transfer to recipient |
+| `WITHDRAW_AMOUNT` | `0.3` | Recipient withdrawal |
+| `RECIPIENT_PUBKEY` | *(random)* | 32-byte hex spending key |
+
+See **[E2E Test Guide](docs/e2e-test.md)** for the full step-by-step breakdown, example output, and troubleshooting.
+
 ## Documentation
 
+- **[E2E Test Guide](docs/e2e-test.md)** — Full walkthrough of the end-to-end test script. Configuration, example output, how Merkle tree mirroring and proof generation work, and troubleshooting.
 - **[Frontend Integration Guide](docs/frontend-integration.md)** — How to build a user-facing app on top of the SDK. Covers wallet connection, spending key derivation, deposit/transfer/withdraw UI flows, proof generation via the Succinct Prover Network, and a minimal React example.
 - **[How It Works (Non-Technical)](docs/how-it-works.md)** — Plain-language explanation for non-developers. What the project does, why privacy matters, how the sealed-envelope analogy works, use cases, and FAQ.
 
