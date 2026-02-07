@@ -102,8 +102,8 @@ fn main() -> Result<()> {
         Commands::Vkeys => {
             let (_, transfer_vk) = client.setup(TRANSFER_ELF);
             let (_, withdraw_vk) = client.setup(WITHDRAW_ELF);
-            println!("TRANSFER_VKEY: 0x{}", transfer_vk.bytes32());
-            println!("WITHDRAW_VKEY: 0x{}", withdraw_vk.bytes32());
+            println!("TRANSFER_VKEY: {}", transfer_vk.bytes32());
+            println!("WITHDRAW_VKEY: {}", withdraw_vk.bytes32());
         }
     }
 

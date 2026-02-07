@@ -6,6 +6,6 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-sp1-zkvm = "5.0.0"
+sp1-zkvm = "=5.2.4"
 shielded-pool-lib = { path = "../../lib" }
 serde = { version = "1.0", default-features = false, features = ["derive"] }

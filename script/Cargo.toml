@@ -12,5 +12,16 @@ hex = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 
+# Force alloy 1.4.x to avoid alloy-consensus 1.0.30 breakage
+alloy-consensus = { workspace = true }
+alloy-tx-macros = { workspace = true }
+alloy-eips = { workspace = true }
+alloy-network = { workspace = true }
+alloy-rpc-types-eth = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
+alloy-signer-aws = { workspace = true }
+alloy-primitives = { workspace = true }
+
 [build-dependencies]
 sp1-build = { workspace = true }
