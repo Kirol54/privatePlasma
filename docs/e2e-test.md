@@ -6,21 +6,21 @@ Full lifecycle test against a deployed ShieldedPool contract: **deposit → priv
 
 The E2E script (`script/src/bin/e2e.rs`) runs 12 steps:
 
-| Step | Action | On-chain? |
-|------|--------|-----------|
-| 0 | Load config from `.env` | — |
-| 1 | Connect wallet + provider | — |
-| 2 | Generate sender & recipient spending keys | — |
-| 3 | Create two deposit notes (A + B) | — |
-| 4 | ERC20 approve + two `deposit()` calls | ✅ |
-| 5 | Replay `Deposit` events to build local Merkle tree, verify root matches on-chain | ✅ (read) |
-| 6 | Build transfer inputs (2-in-2-out, split to recipient + change) | — |
-| 7 | Generate Groth16 transfer proof via Succinct Network | — |
-| 8 | Submit `privateTransfer()` on-chain | ✅ |
-| 9 | Build withdraw inputs (recipient withdraws part of their note) | — |
-| 10 | Generate Groth16 withdraw proof via Succinct Network | — |
-| 11 | Submit `withdraw()` on-chain | ✅ |
-| 12 | Verify: nullifiers spent, leaf count, token balance | ✅ (read) |
+| Step | Action                                                                           | On-chain? |
+| ---- | -------------------------------------------------------------------------------- | --------- |
+| 0    | Load config from `.env`                                                          | —         |
+| 1    | Connect wallet + provider                                                        | —         |
+| 2    | Generate sender & recipient spending keys                                        | —         |
+| 3    | Create two deposit notes (A + B)                                                 | —         |
+| 4    | ERC20 approve + two `deposit()` calls                                            | ✅        |
+| 5    | Replay `Deposit` events to build local Merkle tree, verify root matches on-chain | ✅ (read) |
+| 6    | Build transfer inputs (2-in-2-out, split to recipient + change)                  | —         |
+| 7    | Generate Groth16 transfer proof via Succinct Network                             | —         |
+| 8    | Submit `privateTransfer()` on-chain                                              | ✅        |
+| 9    | Build withdraw inputs (recipient withdraws part of their note)                   | —         |
+| 10   | Generate Groth16 withdraw proof via Succinct Network                             | —         |
+| 11   | Submit `withdraw()` on-chain                                                     | ✅        |
+| 12   | Verify: nullifiers spent, leaf count, token balance                              | ✅ (read) |
 
 ## Prerequisites
 
@@ -38,35 +38,37 @@ cp .env.example .env
 
 ### Required
 
-| Variable | Description |
-|----------|-------------|
-| `RPC_URL` | Plasma RPC endpoint |
-| `PRIVATE_KEY` | Funded wallet private key |
-| `TOKEN_ADDRESS` | ERC20 token (USDT) address |
-| `POOL_ADDRESS` | Deployed ShieldedPool address |
-| `SP1_PRIVATE_KEY` | Succinct Prover Network API key |
+| Variable              | Description                     |
+| --------------------- | ------------------------------- |
+| `RPC_URL`             | Plasma RPC endpoint             |
+| `PRIVATE_KEY`         | Funded wallet private key       |
+| `TOKEN_ADDRESS`       | ERC20 token (USDT) address      |
+| `POOL_ADDRESS`        | Deployed ShieldedPool address   |
+| `NETWORK_PRIVATE_KEY` | Succinct Prover Network API key |
 
 ### Optional
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEPLOY_BLOCK` | `0` | Block the ShieldedPool was deployed at (auto-set by `make deploy-plasma`) |
-| `TREE_LEVELS` | `20` | Merkle tree depth (must match deployment) |
-| `DEPOSIT_A` | `0.7` | First deposit amount in USDT |
-| `DEPOSIT_B` | `0.3` | Second deposit amount in USDT |
-| `TRANSFER_AMOUNT` | `0.5` | Amount sent to recipient in USDT |
-| `WITHDRAW_AMOUNT` | `0.3` | Amount recipient withdraws in USDT |
-| `RECIPIENT_PUBKEY` | *(random)* | 32-byte hex spending key for recipient |
+| Variable           | Default    | Description                                                               |
+| ------------------ | ---------- | ------------------------------------------------------------------------- |
+| `DEPLOY_BLOCK`     | `0`        | Block the ShieldedPool was deployed at (auto-set by `make deploy-plasma`) |
+| `TREE_LEVELS`      | `20`       | Merkle tree depth (must match deployment)                                 |
+| `DEPOSIT_A`        | `0.7`      | First deposit amount in USDT                                              |
+| `DEPOSIT_B`        | `0.3`      | Second deposit amount in USDT                                             |
+| `TRANSFER_AMOUNT`  | `0.5`      | Amount sent to recipient in USDT                                          |
+| `WITHDRAW_AMOUNT`  | `0.3`      | Amount recipient withdraws in USDT                                        |
+| `RECIPIENT_PUBKEY` | _(random)_ | 32-byte hex spending key for recipient                                    |
 
 Amounts use human-readable USDT values (e.g., `0.7` = 700,000 raw units with 6 decimals).
 
 ### Amount Constraints
 
 The script validates:
+
 - `TRANSFER_AMOUNT ≤ DEPOSIT_A + DEPOSIT_B`
 - `WITHDRAW_AMOUNT ≤ TRANSFER_AMOUNT`
 
 The remaining balances become change notes:
+
 - **Transfer change** = `(DEPOSIT_A + DEPOSIT_B) - TRANSFER_AMOUNT` → returned to sender
 - **Withdraw change** = `TRANSFER_AMOUNT - WITHDRAW_AMOUNT` → stays in pool for recipient
 
@@ -80,8 +82,9 @@ make e2e
 ```
 
 This runs:
+
 ```bash
-SP1_PROVER=network SP1_PRIVATE_KEY=$SP1_PRIVATE_KEY \
+SP1_PROVER=network NETWORK_PRIVATE_KEY=$NETWORK_PRIVATE_KEY \
   cargo run --release -p shielded-pool-script --bin e2e
 ```
 
@@ -148,6 +151,7 @@ This is because the E2E script needs to know the recipient's spending key in ord
 **If `RECIPIENT_PUBKEY` is not set**, a random 32-byte key is generated for the test.
 
 To generate a key manually:
+
 ```bash
 # Generate a random 32-byte hex key:
 openssl rand -hex 32
@@ -198,10 +202,10 @@ sol! {
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| `Root mismatch!` | Your local tree diverged from on-chain state. Check that `DEPLOY_BLOCK` in `.env` matches the actual deployment block. |
-| `SP1_PRIVATE_KEY not set` | Add your Succinct API key to `.env` |
-| `POOL_ADDRESS not set` | Deploy the contract first (`make deploy-plasma`) and put the address in `.env` |
-| Proof generation hangs | Check your Succinct dashboard at [network.succinct.xyz](https://network.succinct.xyz) for proof status |
-| `Transfer nullifier not spent` | The transfer proof was rejected on-chain. Check the transaction receipt for revert reason. |
+| Problem                        | Fix                                                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `Root mismatch!`               | Your local tree diverged from on-chain state. Check that `DEPLOY_BLOCK` in `.env` matches the actual deployment block. |
+| `NETWORK_PRIVATE_KEY not set`  | Add your Succinct API key to `.env`                                                                                    |
+| `POOL_ADDRESS not set`         | Deploy the contract first (`make deploy-plasma`) and put the address in `.env`                                         |
+| Proof generation hangs         | Check your Succinct dashboard at [network.succinct.xyz](https://network.succinct.xyz) for proof status                 |
+| `Transfer nullifier not spent` | The transfer proof was rejected on-chain. Check the transaction receipt for revert reason.                             |

@@ -113,26 +113,33 @@ execute-withdraw: ## Execute withdraw circuit (no proof, fast verification)
 		--output $(FIXTURES)/test_output.json --execute-only
 
 prove-transfer: ## Generate real Groth16 transfer proof (via Succinct Network)
-	@test -n "$(SP1_PRIVATE_KEY)" || (echo "Error: SP1_PRIVATE_KEY not set." && exit 1)
-	SP1_PROVER=network SP1_PRIVATE_KEY=$(SP1_PRIVATE_KEY) \
+	@test -n "$(NETWORK_PRIVATE_KEY)" || (echo "Error: NETWORK_PRIVATE_KEY not set." && exit 1)
+	SP1_PROVER=network NETWORK_PRIVATE_KEY=$(NETWORK_PRIVATE_KEY) \
 		cargo run --release -p shielded-pool-script -- \
 		transfer --input $(INPUT) --output $(OUTPUT)
 
 prove-withdraw: ## Generate real Groth16 withdraw proof (via Succinct Network)
-	@test -n "$(SP1_PRIVATE_KEY)" || (echo "Error: SP1_PRIVATE_KEY not set." && exit 1)
-	SP1_PROVER=network SP1_PRIVATE_KEY=$(SP1_PRIVATE_KEY) \
+	@test -n "$(NETWORK_PRIVATE_KEY)" || (echo "Error: NETWORK_PRIVATE_KEY not set." && exit 1)
+	SP1_PROVER=network NETWORK_PRIVATE_KEY=$(NETWORK_PRIVATE_KEY) \
 		cargo run --release -p shielded-pool-script -- \
 		withdraw --input $(INPUT) --output $(OUTPUT)
 
 # ---------- E2E ----------
 
-.PHONY: e2e
+.PHONY: e2e exit
 
 e2e: ## Run full e2e test (deposit → transfer → withdraw) against deployed contract
 	@test -n "$(POOL_ADDRESS)" || (echo "Error: POOL_ADDRESS not set in .env" && exit 1)
-	@test -n "$(SP1_PRIVATE_KEY)" || (echo "Error: SP1_PRIVATE_KEY not set." && exit 1)
-	SP1_PROVER=network SP1_PRIVATE_KEY=$(SP1_PRIVATE_KEY) \
+	@test -n "$(NETWORK_PRIVATE_KEY)" || (echo "Error: NETWORK_PRIVATE_KEY not set." && exit 1)
+	SP1_PROVER=network NETWORK_PRIVATE_KEY=$(NETWORK_PRIVATE_KEY) \
 		cargo run --release -p shielded-pool-script --bin e2e
+
+exit: ## Withdraw ALL unspent notes from the pool (reads fixtures/wallet.json)
+	@test -n "$(POOL_ADDRESS)" || (echo "Error: POOL_ADDRESS not set in .env" && exit 1)
+	@test -n "$(NETWORK_PRIVATE_KEY)" || (echo "Error: NETWORK_PRIVATE_KEY not set." && exit 1)
+	@test -f $(FIXTURES)/wallet.json || (echo "Error: $(FIXTURES)/wallet.json not found. Run 'make e2e' first." && exit 1)
+	SP1_PROVER=network NETWORK_PRIVATE_KEY=$(NETWORK_PRIVATE_KEY) \
+		cargo run --release -p shielded-pool-script --bin exit
 
 # ---------- Help ----------
 

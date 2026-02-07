@@ -33,6 +33,7 @@ Makefile              Build, test, deploy targets (run `make help`)
 **Deposit** — Public. User approves USDT, calls `deposit(commitment, amount)`. The commitment is inserted into the on-chain Merkle tree. No ZK proof needed.
 
 **Private Transfer** — A ZK proof shows:
+
 - Two input notes exist in the Merkle tree (via Merkle proofs)
 - The sender owns both inputs (knows the spending keys)
 - Two output notes are created with the same total value (conservation)
@@ -41,6 +42,7 @@ Makefile              Build, test, deploy targets (run `make help`)
 The contract sees only nullifiers and output commitments — no amounts, no addresses.
 
 **Withdraw** — A ZK proof shows:
+
 - The input note exists in the tree and the sender owns it
 - The withdrawal amount + change = input amount
 - The recipient address is committed inside the proof (prevents front-running)
@@ -49,12 +51,12 @@ The contract sees only nullifiers and output commitments — no amounts, no addr
 
 All hashing uses **keccak256** (matching Solidity). Note commitments, nullifiers, public key derivation, and the Merkle tree all use keccak256.
 
-| Primitive | Formula |
-|-----------|---------|
-| Commitment | `keccak256(amount_be_8 \|\| pubkey_32 \|\| blinding_32)` |
-| Nullifier | `keccak256(commitment \|\| spending_key)` |
-| Public Key | `keccak256(spending_key)` |
-| Merkle Hash | `keccak256(left \|\| right)` |
+| Primitive   | Formula                                                  |
+| ----------- | -------------------------------------------------------- |
+| Commitment  | `keccak256(amount_be_8 \|\| pubkey_32 \|\| blinding_32)` |
+| Nullifier   | `keccak256(commitment \|\| spending_key)`                |
+| Public Key  | `keccak256(spending_key)`                                |
+| Merkle Hash | `keccak256(left \|\| right)`                             |
 
 Note encryption uses NaCl box (x25519 + XSalsa20-Poly1305) for selective disclosure to recipients.
 
@@ -62,10 +64,10 @@ Note encryption uses NaCl box (x25519 + XSalsa20-Poly1305) for selective disclos
 
 Both circuits compile to RISC-V and run inside the SP1 zkVM. Proofs are Groth16 for on-chain verification (~260 bytes per proof).
 
-| Circuit | Inputs | Outputs | Public Values | Cycles |
-|---------|--------|---------|---------------|--------|
-| Transfer | 2 notes in | 2 notes out | root, 2 nullifiers, 2 commitments (160 bytes) | ~321K |
-| Withdraw | 1 note in | withdrawal + optional change | root, nullifier, recipient, amount, change commitment (160 bytes) | ~169K |
+| Circuit  | Inputs     | Outputs                      | Public Values                                                     | Cycles |
+| -------- | ---------- | ---------------------------- | ----------------------------------------------------------------- | ------ |
+| Transfer | 2 notes in | 2 notes out                  | root, 2 nullifiers, 2 commitments (160 bytes)                     | ~321K  |
+| Withdraw | 1 note in  | withdrawal + optional change | root, nullifier, recipient, amount, change commitment (160 bytes) | ~169K  |
 
 ## Prerequisites
 
@@ -102,9 +104,9 @@ Run `make help` to see all available targets.
 
 ```typescript
 import {
-  ShieldedPoolClient,
-  ShieldedWallet,
-  Prover,
+	ShieldedPoolClient,
+	ShieldedWallet,
+	Prover,
 } from "@shielded-pool/client";
 import { ethers } from "ethers";
 
@@ -113,9 +115,9 @@ const wallet = new ShieldedWallet(spendingKey);
 
 // Connect to the pool
 const client = new ShieldedPoolClient({
-  poolAddress: "0x...",
-  tokenAddress: "0x...", // USDT on Plasma
-  signer: ethers.Wallet.fromPhrase("...").connect(provider),
+	poolAddress: "0x...",
+	tokenAddress: "0x...", // USDT on Plasma
+	signer: ethers.Wallet.fromPhrase("...").connect(provider),
 });
 
 // Deposit 100 USDT into the shielded pool
@@ -123,15 +125,12 @@ await client.deposit(100_000000n); // 6 decimals
 
 // Private transfer to another user
 await client.privateTransfer(
-  recipientPubkey, // 32 bytes
-  50_000000n,
+	recipientPubkey, // 32 bytes
+	50_000000n,
 );
 
 // Withdraw to a public address
-await client.withdraw(
-  "0xRecipientAddress",
-  50_000000n,
-);
+await client.withdraw("0xRecipientAddress", 50_000000n);
 
 // Scan for incoming notes (requires viewing key)
 await client.sync();
@@ -140,34 +139,34 @@ console.log("Balance:", wallet.getBalance());
 
 ### SDK Modules
 
-| Module | Description |
-|--------|-------------|
-| `crypto.ts` | keccak256, commitments, nullifiers, key derivation |
-| `merkle.ts` | Client-side Merkle tree (mirrors MerkleTree.sol) |
-| `wallet.ts` | Spending key management, note tracking, coin selection |
-| `encryption.ts` | NaCl box encryption for note data |
-| `prover.ts` | Wraps the Rust proof generation binary |
-| `pool.ts` | High-level `ShieldedPoolClient` for deposit/transfer/withdraw |
+| Module          | Description                                                   |
+| --------------- | ------------------------------------------------------------- |
+| `crypto.ts`     | keccak256, commitments, nullifiers, key derivation            |
+| `merkle.ts`     | Client-side Merkle tree (mirrors MerkleTree.sol)              |
+| `wallet.ts`     | Spending key management, note tracking, coin selection        |
+| `encryption.ts` | NaCl box encryption for note data                             |
+| `prover.ts`     | Wraps the Rust proof generation binary                        |
+| `pool.ts`       | High-level `ShieldedPoolClient` for deposit/transfer/withdraw |
 
 ## Project Dependencies
 
 ### Rust
 
-| Crate | Version | Purpose |
-|-------|---------|---------|
-| `sp1-sdk` | 5.2.4 | SP1 prover host SDK |
-| `sp1-zkvm` | 5.2.4 | SP1 guest VM (RISC-V) |
-| `tiny-keccak` | 2.0 | Keccak256 (no_std) |
-| `serde` | 1.0 | Serialization |
-| `alloy` | 1.4 | Ethereum provider, signers, contract bindings |
-| `clap` | 4 | CLI argument parsing |
+| Crate         | Version | Purpose                                       |
+| ------------- | ------- | --------------------------------------------- |
+| `sp1-sdk`     | 5.2.4   | SP1 prover host SDK                           |
+| `sp1-zkvm`    | 5.2.4   | SP1 guest VM (RISC-V)                         |
+| `tiny-keccak` | 2.0     | Keccak256 (no_std)                            |
+| `serde`       | 1.0     | Serialization                                 |
+| `alloy`       | 1.4     | Ethereum provider, signers, contract bindings |
+| `clap`        | 4       | CLI argument parsing                          |
 
 ### TypeScript
 
-| Package | Purpose |
-|---------|---------|
-| `ethers` ^6.13 | Contract interaction, keccak256 |
-| `tweetnacl` ^1.0 | NaCl box encryption |
+| Package          | Purpose                         |
+| ---------------- | ------------------------------- |
+| `ethers` ^6.13   | Contract interaction, keccak256 |
+| `tweetnacl` ^1.0 | NaCl box encryption             |
 
 ## Proof JSON Format
 
@@ -175,9 +174,9 @@ The prover outputs a JSON file with three fields:
 
 ```json
 {
-  "proof": "hex-encoded Groth16 proof bytes",
-  "public_values": "hex-encoded ABI-encoded public values",
-  "vkey": "bytes32 verification key hash"
+	"proof": "hex-encoded Groth16 proof bytes",
+	"public_values": "hex-encoded ABI-encoded public values",
+	"vkey": "bytes32 verification key hash"
 }
 ```
 
@@ -231,7 +230,7 @@ make help
 Run the full deposit → private transfer → withdraw lifecycle against a deployed contract with real Groth16 proofs:
 
 ```bash
-# 1. Ensure .env has POOL_ADDRESS, PRIVATE_KEY, SP1_PRIVATE_KEY, etc.
+# 1. Ensure .env has POOL_ADDRESS, PRIVATE_KEY, NETWORK_PRIVATE_KEY, etc.
 # 2. Run the E2E flow:
 make e2e
 ```
@@ -242,13 +241,13 @@ This generates two real ZK proofs via the Succinct Prover Network (~2–5 min ea
 
 Set these in `.env` to customise the test flow (defaults shown):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEPOSIT_A` | `0.7` | First deposit (USDT) |
-| `DEPOSIT_B` | `0.3` | Second deposit (USDT) |
-| `TRANSFER_AMOUNT` | `0.5` | Private transfer to recipient |
-| `WITHDRAW_AMOUNT` | `0.3` | Recipient withdrawal |
-| `RECIPIENT_PUBKEY` | *(random)* | 32-byte hex spending key |
+| Variable           | Default    | Description                   |
+| ------------------ | ---------- | ----------------------------- |
+| `DEPOSIT_A`        | `0.7`      | First deposit (USDT)          |
+| `DEPOSIT_B`        | `0.3`      | Second deposit (USDT)         |
+| `TRANSFER_AMOUNT`  | `0.5`      | Private transfer to recipient |
+| `WITHDRAW_AMOUNT`  | `0.3`      | Recipient withdrawal          |
+| `RECIPIENT_PUBKEY` | _(random)_ | 32-byte hex spending key      |
 
 See **[E2E Test Guide](docs/e2e-test.md)** for the full step-by-step breakdown, example output, and troubleshooting.
 

@@ -27,10 +27,10 @@ Proofs are generated via the **Succinct Prover Network** — a decentralized pro
 
 The system uses two completely separate keys. Don't confuse them:
 
-| Key | What it is | Who holds it |
-|-----|-----------|-------------|
-| **Wallet private key** (MetaMask) | Signs on-chain transactions | The user |
-| **SP1 API key** (`SP1_PRIVATE_KEY`) | Authorizes proof generation on the Succinct Prover Network | The app developer |
+| Key                                     | What it is                                                 | Who holds it      |
+| --------------------------------------- | ---------------------------------------------------------- | ----------------- |
+| **Wallet private key** (MetaMask)       | Signs on-chain transactions                                | The user          |
+| **SP1 API key** (`NETWORK_PRIVATE_KEY`) | Authorizes proof generation on the Succinct Prover Network | The app developer |
 
 The SP1 API key is like an Infura or Alchemy key — a service credential for the developer, not a user secret. Get one at [network.succinct.xyz](https://network.succinct.xyz).
 
@@ -53,13 +53,13 @@ For the hackathon, we embed the SP1 API key directly in the frontend code:
 const SP1_API_KEY = "your-succinct-api-key-here";
 
 const client = new ShieldedPoolClient(wallet, {
-  poolAddress: POOL_ADDRESS,
-  tokenAddress: USDT_ADDRESS,
-  signer,
-  proverOptions: {
-    proverNetwork: true,
-    sp1ApiKey: SP1_API_KEY,
-  },
+	poolAddress: POOL_ADDRESS,
+	tokenAddress: USDT_ADDRESS,
+	signer,
+	proverOptions: {
+		proverNetwork: true,
+		sp1ApiKey: SP1_API_KEY,
+	},
 });
 ```
 
@@ -69,10 +69,10 @@ This is fine for a hackathon demo. In production, you'd proxy proof requests thr
 
 When the SDK sends proof inputs to the Succinct Prover Network, the prover infrastructure **can see** the raw inputs (note amounts, spending keys, etc.) during proof generation. The resulting proof reveals nothing, but the proving service itself is trusted.
 
-| Approach | Privacy | Performance | Practical? |
-|----------|---------|-------------|------------|
-| **Succinct Prover Network** (our approach) | Trust Succinct's secure enclaves | ~30-60s | Yes |
-| Client-side local proving | Fully trustless | ~16GB RAM, minutes | Not in a browser |
+| Approach                                   | Privacy                          | Performance        | Practical?       |
+| ------------------------------------------ | -------------------------------- | ------------------ | ---------------- |
+| **Succinct Prover Network** (our approach) | Trust Succinct's secure enclaves | ~30-60s            | Yes              |
+| Client-side local proving                  | Fully trustless                  | ~16GB RAM, minutes | Not in a browser |
 
 For the hackathon, this is the right tradeoff. Succinct's provers run in secure enclaves and don't log inputs. In a production system, client-side proving would be ideal once hardware/WASM support matures.
 
@@ -86,11 +86,13 @@ The spending key is the master secret. Whoever holds it can spend all notes. The
 import { ShieldedWallet, keccak256 } from "@shielded-pool/client";
 import { ethers } from "ethers";
 
-async function createWalletFromSignature(signer: ethers.Signer): Promise<ShieldedWallet> {
-  const message = "Shielded Pool Spending Key Derivation v1";
-  const signature = await signer.signMessage(message);
-  const spendingKey = keccak256(ethers.getBytes(signature));
-  return new ShieldedWallet(spendingKey);
+async function createWalletFromSignature(
+	signer: ethers.Signer,
+): Promise<ShieldedWallet> {
+	const message = "Shielded Pool Spending Key Derivation v1";
+	const signature = await signer.signMessage(message);
+	const spendingKey = keccak256(ethers.getBytes(signature));
+	return new ShieldedWallet(spendingKey);
 }
 ```
 
@@ -121,34 +123,31 @@ npm install @shielded-pool/client ethers
 ### 2. Initialize on page load
 
 ```typescript
-import {
-  ShieldedPoolClient,
-  ShieldedWallet,
-} from "@shielded-pool/client";
+import { ShieldedPoolClient, ShieldedWallet } from "@shielded-pool/client";
 import { ethers } from "ethers";
 
-const POOL_ADDRESS = "0x...";  // Deployed ShieldedPool address
-const USDT_ADDRESS = "0x...";  // USDT on Plasma
+const POOL_ADDRESS = "0x..."; // Deployed ShieldedPool address
+const USDT_ADDRESS = "0x..."; // USDT on Plasma
 
 async function init() {
-  // Connect wallet (MetaMask, WalletConnect, etc.)
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
+	// Connect wallet (MetaMask, WalletConnect, etc.)
+	const provider = new ethers.BrowserProvider(window.ethereum);
+	const signer = await provider.getSigner();
 
-  // Derive spending key from wallet signature
-  const wallet = await createWalletFromSignature(signer);
+	// Derive spending key from wallet signature
+	const wallet = await createWalletFromSignature(signer);
 
-  // Create pool client
-  const client = new ShieldedPoolClient(wallet, {
-    poolAddress: POOL_ADDRESS,
-    tokenAddress: USDT_ADDRESS,
-    signer,
-  });
+	// Create pool client
+	const client = new ShieldedPoolClient(wallet, {
+		poolAddress: POOL_ADDRESS,
+		tokenAddress: USDT_ADDRESS,
+		signer,
+	});
 
-  // Sync Merkle tree from on-chain events
-  await client.sync();
+	// Sync Merkle tree from on-chain events
+	await client.sync();
 
-  return { client, wallet };
+	return { client, wallet };
 }
 ```
 
@@ -156,10 +155,10 @@ async function init() {
 
 ```typescript
 function showBalance(wallet: ShieldedWallet) {
-  const balance = wallet.getBalance();
-  // USDT has 6 decimals
-  const formatted = (Number(balance) / 1_000_000).toFixed(2);
-  return `$${formatted} USDT`;
+	const balance = wallet.getBalance();
+	// USDT has 6 decimals
+	const formatted = (Number(balance) / 1_000_000).toFixed(2);
+	return `$${formatted} USDT`;
 }
 ```
 
@@ -169,20 +168,21 @@ The user deposits public USDT into the shielded pool. After this, their tokens a
 
 ```typescript
 async function handleDeposit(client: ShieldedPoolClient, amountUsdt: number) {
-  const amount = BigInt(Math.round(amountUsdt * 1_000_000)); // 6 decimals
+	const amount = BigInt(Math.round(amountUsdt * 1_000_000)); // 6 decimals
 
-  // This will:
-  // 1. Create a note commitment
-  // 2. Approve USDT spending
-  // 3. Call deposit() on the contract
-  // 4. Track the note locally
-  const receipt = await client.deposit(amount);
+	// This will:
+	// 1. Create a note commitment
+	// 2. Approve USDT spending
+	// 3. Call deposit() on the contract
+	// 4. Track the note locally
+	const receipt = await client.deposit(amount);
 
-  return receipt.hash; // transaction hash
+	return receipt.hash; // transaction hash
 }
 ```
 
 **UI flow:**
+
 1. User enters amount (e.g., "100 USDT")
 2. MetaMask popup: approve USDT spending
 3. MetaMask popup: deposit transaction
@@ -197,26 +197,27 @@ The user sends USDT privately to another user. The recipient is identified by th
 import { hexToBytes } from "@shielded-pool/client";
 
 async function handleTransfer(
-  client: ShieldedPoolClient,
-  recipientPubkeyHex: string,
-  amountUsdt: number
+	client: ShieldedPoolClient,
+	recipientPubkeyHex: string,
+	amountUsdt: number,
 ) {
-  const amount = BigInt(Math.round(amountUsdt * 1_000_000));
-  const recipientPubkey = hexToBytes(recipientPubkeyHex);
+	const amount = BigInt(Math.round(amountUsdt * 1_000_000));
+	const recipientPubkey = hexToBytes(recipientPubkeyHex);
 
-  // This will:
-  // 1. Select input notes from wallet
-  // 2. Create output notes (recipient + change)
-  // 3. Generate ZK proof via Succinct Prover Network (~30-60s)
-  // 4. Submit transaction
-  // 5. Update local state
-  const receipt = await client.privateTransfer(recipientPubkey, amount);
+	// This will:
+	// 1. Select input notes from wallet
+	// 2. Create output notes (recipient + change)
+	// 3. Generate ZK proof via Succinct Prover Network (~30-60s)
+	// 4. Submit transaction
+	// 5. Update local state
+	const receipt = await client.privateTransfer(recipientPubkey, amount);
 
-  return receipt.hash;
+	return receipt.hash;
 }
 ```
 
 **UI flow:**
+
 1. User enters recipient's public key and amount
 2. Show "Generating proof..." spinner (~30-60 seconds)
 3. MetaMask popup: submit transfer transaction
@@ -229,21 +230,21 @@ The user converts private USDT back to public USDT, sent to any address.
 
 ```typescript
 async function handleWithdraw(
-  client: ShieldedPoolClient,
-  recipientAddress: string,
-  amountUsdt: number
+	client: ShieldedPoolClient,
+	recipientAddress: string,
+	amountUsdt: number,
 ) {
-  const amount = BigInt(Math.round(amountUsdt * 1_000_000));
+	const amount = BigInt(Math.round(amountUsdt * 1_000_000));
 
-  // This will:
-  // 1. Select an input note
-  // 2. Create change note if partial withdrawal
-  // 3. Generate ZK proof via Succinct Prover Network (~30-60s)
-  // 4. Submit transaction (tokens sent to recipientAddress)
-  // 5. Update local state
-  const receipt = await client.withdraw(amount, recipientAddress);
+	// This will:
+	// 1. Select an input note
+	// 2. Create change note if partial withdrawal
+	// 3. Generate ZK proof via Succinct Prover Network (~30-60s)
+	// 4. Submit transaction (tokens sent to recipientAddress)
+	// 5. Update local state
+	const receipt = await client.withdraw(amount, recipientAddress);
 
-  return receipt.hash;
+	return receipt.hash;
 }
 ```
 
@@ -255,7 +256,7 @@ For others to send you private transfers, they need your **public key** (not you
 import { bytesToHex } from "@shielded-pool/client";
 
 function getMyPublicKey(wallet: ShieldedWallet): string {
-  return bytesToHex(wallet.pubkey);
+	return bytesToHex(wallet.pubkey);
 }
 // Returns something like: "0x1a2b3c4d...64 hex chars"
 ```
@@ -274,21 +275,21 @@ When someone sends you a private transfer, you need to scan for it. The SDK does
 import { decryptNote, deriveViewingKeypair } from "@shielded-pool/client";
 
 async function scanForMyNotes(
-  client: ShieldedPoolClient,
-  wallet: ShieldedWallet
+	client: ShieldedPoolClient,
+	wallet: ShieldedWallet,
 ) {
-  const viewingKeypair = deriveViewingKeypair(wallet.getSpendingKey());
-  const tree = client.getTree();
+	const viewingKeypair = deriveViewingKeypair(wallet.getSpendingKey());
+	const tree = client.getTree();
 
-  for (let i = 0; i < tree.nextIndex; i++) {
-    const encrypted = await pool.getEncryptedNote(i);
-    if (encrypted.length === 0) continue;
+	for (let i = 0; i < tree.nextIndex; i++) {
+		const encrypted = await pool.getEncryptedNote(i);
+		if (encrypted.length === 0) continue;
 
-    const note = decryptNote(encrypted, viewingKeypair.secretKey);
-    if (note) {
-      wallet.addNote(note, i);
-    }
-  }
+		const note = decryptNote(encrypted, viewingKeypair.secretKey);
+		if (note) {
+			wallet.addNote(note, i);
+		}
+	}
 }
 ```
 
@@ -296,56 +297,56 @@ async function scanForMyNotes(
 
 ```tsx
 function ShieldedPool() {
-  const [balance, setBalance] = useState("0.00");
-  const [loading, setLoading] = useState(false);
-  const [client, setClient] = useState<ShieldedPoolClient | null>(null);
-  const [wallet, setWallet] = useState<ShieldedWallet | null>(null);
+	const [balance, setBalance] = useState("0.00");
+	const [loading, setLoading] = useState(false);
+	const [client, setClient] = useState<ShieldedPoolClient | null>(null);
+	const [wallet, setWallet] = useState<ShieldedWallet | null>(null);
 
-  async function connect() {
-    const { client, wallet } = await init();
-    setClient(client);
-    setWallet(wallet);
-    setBalance((Number(wallet.getBalance()) / 1e6).toFixed(2));
-  }
+	async function connect() {
+		const { client, wallet } = await init();
+		setClient(client);
+		setWallet(wallet);
+		setBalance((Number(wallet.getBalance()) / 1e6).toFixed(2));
+	}
 
-  async function deposit(amount: number) {
-    if (!client) return;
-    setLoading(true);
-    await client.deposit(BigInt(amount * 1e6));
-    setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-    setLoading(false);
-  }
+	async function deposit(amount: number) {
+		if (!client) return;
+		setLoading(true);
+		await client.deposit(BigInt(amount * 1e6));
+		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
+		setLoading(false);
+	}
 
-  async function transfer(pubkey: string, amount: number) {
-    if (!client) return;
-    setLoading(true);
-    await client.privateTransfer(hexToBytes(pubkey), BigInt(amount * 1e6));
-    setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-    setLoading(false);
-  }
+	async function transfer(pubkey: string, amount: number) {
+		if (!client) return;
+		setLoading(true);
+		await client.privateTransfer(hexToBytes(pubkey), BigInt(amount * 1e6));
+		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
+		setLoading(false);
+	}
 
-  async function withdraw(address: string, amount: number) {
-    if (!client) return;
-    setLoading(true);
-    await client.withdraw(BigInt(amount * 1e6), address);
-    setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-    setLoading(false);
-  }
+	async function withdraw(address: string, amount: number) {
+		if (!client) return;
+		setLoading(true);
+		await client.withdraw(BigInt(amount * 1e6), address);
+		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
+		setLoading(false);
+	}
 
-  return (
-    <div>
-      {!client ? (
-        <button onClick={connect}>Connect Wallet</button>
-      ) : (
-        <div>
-          <p>Shielded Balance: ${balance} USDT</p>
-          <p>My Public Key: {bytesToHex(wallet!.pubkey)}</p>
-          {loading && <p>Generating proof...</p>}
-          {/* Add forms for deposit, transfer, withdraw here */}
-        </div>
-      )}
-    </div>
-  );
+	return (
+		<div>
+			{!client ? (
+				<button onClick={connect}>Connect Wallet</button>
+			) : (
+				<div>
+					<p>Shielded Balance: ${balance} USDT</p>
+					<p>My Public Key: {bytesToHex(wallet!.pubkey)}</p>
+					{loading && <p>Generating proof...</p>}
+					{/* Add forms for deposit, transfer, withdraw here */}
+				</div>
+			)}
+		</div>
+	);
 }
 ```
 
