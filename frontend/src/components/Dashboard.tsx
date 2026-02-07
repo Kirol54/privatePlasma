@@ -59,26 +59,43 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Info Card */}
+      {/* Info Card — share these with senders */}
       <div className="card">
         <div className="card-title">Wallet Info</div>
-        <div className="balance-row">
-          <span className="balance-label">Public Key</span>
-          <span className="address" style={{ fontSize: 11, wordBreak: 'break-all' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 12 }}>
+          Share both keys below with anyone who wants to send you a private transfer.
+        </p>
+        <div className="balance-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+          <span className="balance-label">Shielded Public Key</span>
+          <span className="address" style={{ fontSize: 11, wordBreak: 'break-all', cursor: 'pointer' }}
+            onClick={() => navigator.clipboard.writeText(bytesToHex(shieldedWallet.pubkey))}
+            title="Click to copy"
+          >
             {bytesToHex(shieldedWallet.pubkey)}
           </span>
         </div>
-        <div className="balance-row">
-          <span className="balance-label">Spendable Notes</span>
-          <span className="balance-value" style={{ fontSize: 15 }}>
-            {shieldedWallet.getSpendableNotes().length}
+        <div className="balance-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4, marginTop: 8 }}>
+          <span className="balance-label">Viewing Public Key</span>
+          <span className="address" style={{ fontSize: 11, wordBreak: 'break-all', cursor: 'pointer' }}
+            onClick={() => navigator.clipboard.writeText(bytesToHex(shieldedWallet.getViewingPublicKey()))}
+            title="Click to copy"
+          >
+            {bytesToHex(shieldedWallet.getViewingPublicKey())}
           </span>
         </div>
-        <div className="balance-row">
-          <span className="balance-label">Tree Leaves</span>
-          <span className="balance-value" style={{ fontSize: 15 }}>
-            {treeLeaves}
-          </span>
+        <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
+          <div className="balance-row">
+            <span className="balance-label">Spendable Notes</span>
+            <span className="balance-value" style={{ fontSize: 15, marginLeft: 8 }}>
+              {shieldedWallet.getSpendableNotes().length}
+            </span>
+          </div>
+          <div className="balance-row">
+            <span className="balance-label">Tree Leaves</span>
+            <span className="balance-value" style={{ fontSize: 15, marginLeft: 8 }}>
+              {treeLeaves}
+            </span>
+          </div>
         </div>
       </div>
 

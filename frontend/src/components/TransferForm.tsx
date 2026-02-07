@@ -5,6 +5,7 @@ import { TxStatus } from './TxStatus';
 export function TransferForm() {
   const { privateTransfer, tokenSymbol, tokenDecimals, shieldedBalance, txProgress, clearTxProgress, shieldedWallet } = useShielded();
   const [recipientPubkey, setRecipientPubkey] = useState('');
+  const [recipientViewingPubkey, setRecipientViewingPubkey] = useState('');
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -18,6 +19,9 @@ export function TransferForm() {
     );
   }
 
+  const spendableCount = shieldedWallet.getSpendableNotes().length;
+  const needsMoreNotes = spendableCount < 2;
+
   const formatBalance = (bal: bigint) => {
     const divisor = BigInt(10 ** tokenDecimals);
     const whole = bal / divisor;
@@ -28,16 +32,17 @@ export function TransferForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !recipientPubkey || isSubmitting) return;
+    if (!amount || !recipientPubkey || !recipientViewingPubkey || isSubmitting) return;
 
     setIsSubmitting(true);
     clearTxProgress();
 
     try {
       const amountBigInt = BigInt(Math.round(parseFloat(amount) * 10 ** tokenDecimals));
-      await privateTransfer(recipientPubkey, amountBigInt);
+      await privateTransfer(recipientPubkey, amountBigInt, recipientViewingPubkey);
       setAmount('');
       setRecipientPubkey('');
+      setRecipientViewingPubkey('');
     } catch (err) {
       // Error captured in txProgress
     } finally {
@@ -53,17 +58,38 @@ export function TransferForm() {
           Send tokens privately within the shielded pool. Neither the amount nor the recipient is visible on-chain.
         </p>
 
+        {needsMoreNotes && (
+          <div className="status status-warning" style={{ marginBottom: 16 }}>
+            The 2-in-2-out transfer circuit requires at least 2 shielded notes.
+            You have {spendableCount}. Make {2 - spendableCount} more deposit{2 - spendableCount > 1 ? 's' : ''} first,
+            or use Withdraw to move funds with a single note.
+          </div>
+        )}
+
         <div className="input-group">
-          <label>Recipient Public Key</label>
+          <label>Recipient Shielded Public Key</label>
           <input
             type="text"
             className="input"
-            placeholder="0x..."
+            placeholder="0x... (64 hex chars)"
             value={recipientPubkey}
             onChange={(e) => setRecipientPubkey(e.target.value)}
             disabled={isSubmitting}
           />
-          <div className="input-hint">The recipient's shielded wallet public key (64 hex chars)</div>
+          <div className="input-hint">The recipient's shielded pubkey from their Dashboard</div>
+        </div>
+
+        <div className="input-group">
+          <label>Recipient Viewing Public Key</label>
+          <input
+            type="text"
+            className="input"
+            placeholder="0x... (64 hex chars)"
+            value={recipientViewingPubkey}
+            onChange={(e) => setRecipientViewingPubkey(e.target.value)}
+            disabled={isSubmitting}
+          />
+          <div className="input-hint">So the recipient can decrypt and claim the note</div>
         </div>
 
         <div className="input-group">
@@ -86,7 +112,7 @@ export function TransferForm() {
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={!amount || !recipientPubkey || parseFloat(amount) <= 0 || isSubmitting}
+          disabled={!amount || !recipientPubkey || !recipientViewingPubkey || parseFloat(amount) <= 0 || isSubmitting || needsMoreNotes}
         >
           {isSubmitting ? (
             <>

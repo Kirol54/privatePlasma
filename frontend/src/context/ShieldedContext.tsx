@@ -32,7 +32,7 @@ interface ShieldedState {
   resetWallet: () => void;
   sync: () => Promise<void>;
   deposit: (amount: bigint) => Promise<void>;
-  privateTransfer: (recipientPubkeyHex: string, amount: bigint) => Promise<void>;
+  privateTransfer: (recipientPubkeyHex: string, amount: bigint, recipientViewingPubkeyHex: string) => Promise<void>;
   withdraw: (amount: bigint, recipient: string) => Promise<void>;
   clearTxProgress: () => void;
 }
@@ -187,17 +187,23 @@ export function ShieldedProvider({ children }: { children: React.ReactNode }) {
     updateState();
   }, [address, updateState]);
 
-  const privateTransfer = useCallback(async (recipientPubkeyHex: string, amount: bigint) => {
+  const privateTransfer = useCallback(async (recipientPubkeyHex: string, amount: bigint, recipientViewingPubkeyHex: string) => {
     const client = poolClientRef.current;
     if (!client) throw new Error('Not connected');
 
-    const clean = recipientPubkeyHex.startsWith('0x') ? recipientPubkeyHex.slice(2) : recipientPubkeyHex;
-    const pubkey = new Uint8Array(clean.length / 2);
-    for (let i = 0; i < pubkey.length; i++) {
-      pubkey[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
-    }
+    const parseHex = (hex: string) => {
+      const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
+      }
+      return bytes;
+    };
 
-    await client.privateTransfer(pubkey, amount, setTxProgress);
+    const pubkey = parseHex(recipientPubkeyHex);
+    const viewingPubkey = parseHex(recipientViewingPubkeyHex);
+
+    await client.privateTransfer(pubkey, amount, viewingPubkey, setTxProgress);
     updateState();
   }, [updateState]);
 
