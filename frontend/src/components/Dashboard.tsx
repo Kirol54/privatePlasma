@@ -65,7 +65,7 @@ export function Dashboard() {
         <div className="balance-row">
           <span className="balance-label">Public Key</span>
           <span className="address" style={{ fontSize: 11, wordBreak: 'break-all' }}>
-            {bytesToHex(shieldedWallet.pubkey).slice(0, 22)}...
+            {bytesToHex(shieldedWallet.pubkey)}
           </span>
         </div>
         <div className="balance-row">
