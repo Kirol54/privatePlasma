@@ -1,0 +1,28 @@
+:root {
+  --bg-primary: #0a1f0a;
+  --bg-secondary: #0f2a0f;
+  --bg-card: #1a3a1a;
+  --bg-card-hover: #1f451f;
+  --bg-input: #0d250d;
+  --accent: #00ff88;
+  --accent-dim: #4ade80;
+  --accent-glow: rgba(0, 255, 136, 0.15);
+  --text-primary: #e8f5e8;
+  --text-secondary: #8fbc8f;
+  --text-muted: #5a8a5a;
+  --border: #2d5a2d;
+  --border-focus: #00ff88;
+  --error: #ff6b6b;
+  --error-bg: rgba(255, 107, 107, 0.1);
+  --success: #00ff88;
+  --success-bg: rgba(0, 255, 136, 0.1);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.1);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.1);
+  --transition: 0.2s ease;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}

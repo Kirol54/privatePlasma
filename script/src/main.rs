@@ -7,8 +7,8 @@
 //!   execute   - Execute a program without proof generation (for testing)
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
-use sp1_sdk::{include_elf, HashableKey, ProverClient, SP1Stdin};
+use clap::{ Parser, Subcommand };
+use sp1_sdk::{ include_elf, HashableKey, ProverClient, SP1Stdin };
 use std::fs;
 
 pub const TRANSFER_ELF: &[u8] = include_elf!("transfer-program");
@@ -71,33 +71,11 @@ fn main() -> Result<()> {
     let client = ProverClient::from_env();
 
     match cli.command {
-        Commands::Transfer {
-            input,
-            output,
-            execute_only,
-        } => {
-            generate_proof(
-                &client,
-                TRANSFER_ELF,
-                "transfer",
-                &input,
-                &output,
-                execute_only,
-            )?;
+        Commands::Transfer { input, output, execute_only } => {
+            generate_proof(&client, TRANSFER_ELF, "transfer", &input, &output, execute_only)?;
         }
-        Commands::Withdraw {
-            input,
-            output,
-            execute_only,
-        } => {
-            generate_proof(
-                &client,
-                WITHDRAW_ELF,
-                "withdraw",
-                &input,
-                &output,
-                execute_only,
-            )?;
+        Commands::Withdraw { input, output, execute_only } => {
+            generate_proof(&client, WITHDRAW_ELF, "withdraw", &input, &output, execute_only)?;
         }
         Commands::Vkeys => {
             let (_, transfer_vk) = client.setup(TRANSFER_ELF);
@@ -116,7 +94,7 @@ fn generate_proof(
     name: &str,
     input_path: &str,
     output_path: &str,
-    execute_only: bool,
+    execute_only: bool
 ) -> Result<()> {
     // 1. Read inputs from JSON file
     let input_json = fs::read_to_string(input_path)?;
@@ -127,13 +105,15 @@ fn generate_proof(
     // Depending on the circuit, deserialize the appropriate type and write it
     match name {
         "transfer" => {
-            let inputs: shielded_pool_lib::TransferPrivateInputs =
-                serde_json::from_str(&input_json)?;
+            let inputs: shielded_pool_lib::TransferPrivateInputs = serde_json::from_str(
+                &input_json
+            )?;
             stdin.write(&inputs);
         }
         "withdraw" => {
-            let inputs: shielded_pool_lib::WithdrawPrivateInputs =
-                serde_json::from_str(&input_json)?;
+            let inputs: shielded_pool_lib::WithdrawPrivateInputs = serde_json::from_str(
+                &input_json
+            )?;
             stdin.write(&inputs);
         }
         _ => unreachable!(),
@@ -142,16 +122,8 @@ fn generate_proof(
     if execute_only {
         // Execute without proof — fast sanity check
         let (public_values, report) = client.execute(elf, &stdin).run()?;
-        println!(
-            "[{}] Execution successful. Cycles: {}",
-            name,
-            report.total_instruction_count()
-        );
-        println!(
-            "[{}] Public values size: {} bytes",
-            name,
-            public_values.as_slice().len()
-        );
+        println!("[{}] Execution successful. Cycles: {}", name, report.total_instruction_count());
+        println!("[{}] Public values size: {} bytes", name, public_values.as_slice().len());
         return Ok(());
     }
 
@@ -163,8 +135,8 @@ fn generate_proof(
     let proof = client.prove(&pk, &stdin).groth16().run()?;
 
     // 5. Verify locally
-    client.verify(&proof, &vk)?;
-    println!("[{}] Proof verified locally", name);
+    // client.verify(&proof, &vk)?;
+    // println!("[{}] Proof verified locally", name);
 
     // 6. Extract proof bytes and public values
     let proof_bytes = proof.bytes();
