@@ -198,7 +198,60 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
           </div>
         </div>
       </section>
+      {/* ─── USE CASES ───────────────────────────────────────────────── */}
+      <section className="section" id="use-cases">
+        <h2 className="section-title">Enterprise Payment Use Cases</h2>
+        <p className="section-lead">
+          Real-world scenarios where payment confidentiality matters.
+        </p>
 
+        <div className="use-cases-grid">
+          <UseCaseCard
+            icon="📄"
+            title="B2B Invoice Settlements"
+            bullets={[
+              'Companies settle invoices in USDT on-chain',
+              'Pricing, volume, and counterparties stay confidential',
+              'Competitors cannot scrape payment data',
+              'Settlements are final, provable, and auditable',
+            ]}
+            flow={{ from: 'Company A', to: 'Company B', hidden: 'amount, pricing, relationship' }}
+          />
+          <UseCaseCard
+            icon="💼"
+            title="Confidential Payroll & Contractor Payments"
+            bullets={[
+              'Pay salaries or contractors privately in USDT',
+              'No public salary leaks or org-chart inference',
+              'Employees can withdraw publicly or stay shielded',
+              'Viewing keys enable auditing when required',
+            ]}
+            flow={{ from: 'Employer', to: 'Employees', hidden: 'salary amounts, org structure' }}
+          />
+          <UseCaseCard
+            icon="🏛️"
+            title="Treasury & Internal Fund Movements"
+            bullets={[
+              'Move USDT between internal wallets privately',
+              'Prevents balance tracking and strategy inference',
+              'Rebalancing, runway management, ops funds',
+              'Full on-chain settlement with confidentiality',
+            ]}
+            flow={{ from: 'Treasury', to: 'Ops Wallet', hidden: 'balances, fund movements' }}
+          />
+          <UseCaseCard
+            icon="🤝"
+            title="Partner & Revenue-Share Payouts"
+            bullets={[
+              'Pay partners without revealing revenue splits',
+              'Partner performance stays confidential',
+              'Clean on-chain settlement',
+              'Protect confidential business relationships',
+            ]}
+            flow={{ from: 'Platform', to: 'Partners', hidden: 'revenue splits, performance data' }}
+          />
+        </div>
+      </section>
       {/* ─── PAYMENT LIFECYCLE ───────────────────────────────────────── */}
       <section className="section" id="lifecycle">
         <h2 className="section-title">Payment Lifecycle</h2>
@@ -341,7 +394,7 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
               detail="Browser sends ERC-20 approve(poolAddress, amount) transaction via MetaMask so the ShieldedPool can pull tokens." />
             <DetailedStep num={4} action="Call deposit(commitment, amount, encryptedData)"
               component="ShieldedPool.sol" location="on-chain"
-              detail="Contract transfers USDT from user into escrow, inserts commitment into the on-chain Merkle tree (30-root history), and emits a Deposit event with encrypted note data. No ZK proof required." />
+              detail="Contract transfers USDT from user into escrow, inserts commitment into the on-chain Merkle tree (20-root history), and emits a Deposit event with encrypted note data. No ZK proof required." />
             <DetailedStep num={5} action="Store note in local wallet"
               component="ShieldedWallet" location="browser"
               detail="Wallet adds the new note (amount, blinding, leaf index) to its local store. Persisted in localStorage for recovery." />
@@ -359,7 +412,7 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
               detail="Sender specifies recipient's shielded public key, viewing public key, and the USDT amount to transfer privately." />
             <DetailedStep num={2} action="Select input notes (coin selection)"
               component="ShieldedWallet" location="browser"
-              detail="Wallet selects 2 unspent notes that together cover the amount (greedy largest-first). If only 1 note is needed, a zero-value padding note is used to satisfy the 2-in-2-out circuit." />
+              detail="Wallet selects 2 unspent notes that together cover the amount (greedy largest-first)." />
             <DetailedStep num={3} action="Create output notes"
               component="ShieldedWallet" location="browser"
               detail="Creates Note C (recipient's pubkey, transfer amount, random blinding) and Note D (sender's pubkey, change amount, random blinding). Each encrypted with the respective viewing key." />
@@ -368,7 +421,7 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
               detail="Fetches the current Merkle root and generates inclusion proofs (sibling hashes + path bits) for each input note's leaf index from the locally-mirrored tree." />
             <DetailedStep num={5} action="Generate SP1 Groth16 proof"
               component="Prover (via Proxy)" location="proxy"
-              detail="Browser sends POST /prove/transfer to the Express proxy server. Proxy spawns the Rust SP1 prover binary (cargo run --release) which generates a Groth16 proof. The proof attests: both inputs exist in tree, sender owns them (knows spending keys), output amounts = input amounts (conservation), and nullifiers are correctly derived. Takes ~1–10 min." />
+              detail="Browser sends POST /prove/transfer to the Express proxy server. Proxy spawns the Rust SP1 prover binary (cargo run --release) which requests a Groth16 proof on Succint Prover Network. The proof attests: both inputs exist in tree, sender owns them (knows spending keys), output amounts = input amounts (conservation), and nullifiers are correctly derived. Takes ~1–3 min." />
             <DetailedStep num={6} action="Submit privateTransfer(proof, publicValues, enc1, enc2)"
               component="ShieldedPool.sol" location="on-chain"
               detail="Contract verifies the SP1 proof against TRANSFER_VKEY. Checks nullifiers haven't been spent before. Marks both input nullifiers as spent. Inserts 2 new output commitments into Merkle tree. Emits EncryptedNote events with the encrypted output data." />
@@ -468,60 +521,6 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
         </Collapsible>
       </section>
 
-      {/* ─── USE CASES ───────────────────────────────────────────────── */}
-      <section className="section" id="use-cases">
-        <h2 className="section-title">Enterprise Payment Use Cases</h2>
-        <p className="section-lead">
-          Real-world scenarios where payment confidentiality matters.
-        </p>
-
-        <div className="use-cases-grid">
-          <UseCaseCard
-            icon="📄"
-            title="B2B Invoice Settlements"
-            bullets={[
-              'Companies settle invoices in USDT on-chain',
-              'Pricing, volume, and counterparties stay confidential',
-              'Competitors cannot scrape payment data',
-              'Settlements are final, provable, and auditable',
-            ]}
-            flow={{ from: 'Company A', to: 'Company B', hidden: 'amount, pricing, relationship' }}
-          />
-          <UseCaseCard
-            icon="💼"
-            title="Confidential Payroll & Contractor Payments"
-            bullets={[
-              'Pay salaries or contractors privately in USDT',
-              'No public salary leaks or org-chart inference',
-              'Employees can withdraw publicly or stay shielded',
-              'Viewing keys enable auditing when required',
-            ]}
-            flow={{ from: 'Employer', to: 'Employees', hidden: 'salary amounts, org structure' }}
-          />
-          <UseCaseCard
-            icon="🏛️"
-            title="Treasury & Internal Fund Movements"
-            bullets={[
-              'Move USDT between internal wallets privately',
-              'Prevents balance tracking and strategy inference',
-              'Rebalancing, runway management, ops funds',
-              'Full on-chain settlement with confidentiality',
-            ]}
-            flow={{ from: 'Treasury', to: 'Ops Wallet', hidden: 'balances, fund movements' }}
-          />
-          <UseCaseCard
-            icon="🤝"
-            title="Partner & Revenue-Share Payouts"
-            bullets={[
-              'Pay partners without revealing revenue splits',
-              'Partner performance stays confidential',
-              'Clean on-chain settlement',
-              'Protect confidential business relationships',
-            ]}
-            flow={{ from: 'Platform', to: 'Partners', hidden: 'revenue splits, performance data' }}
-          />
-        </div>
-      </section>
 
       {/* ─── WHY PLASMA ──────────────────────────────────────────────── */}
       <section className="section" id="plasma">
