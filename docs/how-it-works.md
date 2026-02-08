@@ -136,6 +136,12 @@ When you spend a note, a unique identifier called a nullifier is revealed on-cha
 
 Your funds are on the blockchain, not on any website. Even if the frontend application disappears, you can interact directly with the smart contract using your spending key and the SDK. Your notes are always recoverable as long as you have your spending key.
 
+## Using It Without the Website
+
+The frontend and proxy server are optional. The entire shielded pool protocol can be used directly from the command line using the Rust CLI and Makefile targets (e.g., `make execute-transfer`, `make e2e`). In this mode, all private inputs stay on your machine — no data is sent to any server. This minimizes trust and provides the highest level of privacy.
+
+See the project README's "Proving Architecture & Trust Model" section for more details on trust boundaries and proving options.
+
 ## The Technology Stack
 
 For those curious about what's under the hood:
@@ -143,7 +149,7 @@ For those curious about what's under the hood:
 - **Smart contracts** (Solidity): Run on Plasma, hold the funds, verify proofs
 - **Zero-knowledge circuits** (Rust / SP1): Define the rules for valid transactions and generate proofs
 - **Client SDK** (TypeScript): Manages keys, builds transactions, talks to the blockchain
-- **Frontend** (React + TypeScript): Browser UI with MetaMask wallet integration
-- **Proxy server** (Express): Bridges the browser to the Rust proof generator
+- **Frontend** (React + TypeScript): Browser UI with MetaMask wallet integration (optional — for demos and UX)
+- **Proxy server** (Express): Bridges the browser to the Rust proof generator (optional — a hackathon convenience, not a protocol requirement)
 - **SP1 zkVM**: A virtual machine that runs the proof generation. It can prove that arbitrary Rust code executed correctly without revealing its inputs
 - **NaCl encryption**: Note data is encrypted with x25519 + XSalsa20-Poly1305 for selective disclosure to recipients
