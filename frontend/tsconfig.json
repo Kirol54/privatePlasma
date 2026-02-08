@@ -15,10 +15,8 @@
 		"noUnusedParameters": false,
 		"noFallthroughCasesInSwitch": true,
 		"paths": {
-			"@/*": ["./src/*"],
-			"*": ["node_modules/*"]
-		},
-		"baseUrl": "."
+			"@/*": ["./src/*"]
+		}
 	},
 	"include": ["src"]
 }
