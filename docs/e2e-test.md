@@ -6,21 +6,21 @@ Full lifecycle test against a deployed ShieldedPool contract: **deposit → priv
 
 The E2E script (`script/src/bin/e2e.rs`) runs 12 steps:
 
-| Step | Action                                                                           | On-chain? |
-| ---- | -------------------------------------------------------------------------------- | --------- |
-| 0    | Load config from `.env`                                                          | —         |
-| 1    | Connect wallet + provider                                                        | —         |
-| 2    | Generate sender & recipient spending keys                                        | —         |
-| 3    | Create two deposit notes (A + B)                                                 | —         |
-| 4    | ERC20 approve + two `deposit()` calls                                            | ✅        |
-| 5    | Replay `Deposit` events to build local Merkle tree, verify root matches on-chain | ✅ (read) |
-| 6    | Build transfer inputs (2-in-2-out, split to recipient + change)                  | —         |
-| 7    | Generate Groth16 transfer proof via Succinct Network                             | —         |
-| 8    | Submit `privateTransfer()` on-chain                                              | ✅        |
-| 9    | Build withdraw inputs (recipient withdraws part of their note)                   | —         |
-| 10   | Generate Groth16 withdraw proof via Succinct Network                             | —         |
-| 11   | Submit `withdraw()` on-chain                                                     | ✅        |
-| 12   | Verify: nullifiers spent, leaf count, token balance                              | ✅ (read) |
+| Step | Action                                                                                   | On-chain? |
+| ---- | ---------------------------------------------------------------------------------------- | --------- |
+| 0    | Load config from `.env`                                                                  | —         |
+| 1    | Connect wallet + provider                                                                | —         |
+| 2    | Generate sender & recipient spending keys + viewing keypairs                             | —         |
+| 3    | Create two deposit notes (A + B)                                                         | —         |
+| 4    | ERC20 approve + two `deposit()` calls with encrypted note data                           | ✅        |
+| 5    | Replay all events to build local Merkle tree, verify root matches on-chain               | ✅ (read) |
+| 6    | Build transfer inputs (2-in-2-out, split to recipient + change)                          | —         |
+| 7    | Generate Groth16 transfer proof via Succinct Network                                     | —         |
+| 8    | Submit `privateTransfer()` with encrypted output notes (recipient + sender viewing keys) | ✅        |
+| 9    | Build withdraw inputs (recipient withdraws part of their note)                           | —         |
+| 10   | Generate Groth16 withdraw proof via Succinct Network                                     | —         |
+| 11   | Submit `withdraw()` with encrypted change note                                           | ✅        |
+| 12   | Verify: nullifiers spent, leaf count, token balance                                      | ✅ (read) |
 
 ## Prerequisites
 
@@ -48,15 +48,16 @@ cp .env.example .env
 
 ### Optional
 
-| Variable           | Default    | Description                                                               |
-| ------------------ | ---------- | ------------------------------------------------------------------------- |
-| `DEPLOY_BLOCK`     | `0`        | Block the ShieldedPool was deployed at (auto-set by `make deploy-plasma`) |
-| `TREE_LEVELS`      | `20`       | Merkle tree depth (must match deployment)                                 |
-| `DEPOSIT_A`        | `0.7`      | First deposit amount in USDT                                              |
-| `DEPOSIT_B`        | `0.3`      | Second deposit amount in USDT                                             |
-| `TRANSFER_AMOUNT`  | `0.5`      | Amount sent to recipient in USDT                                          |
-| `WITHDRAW_AMOUNT`  | `0.3`      | Amount recipient withdraws in USDT                                        |
-| `RECIPIENT_PUBKEY` | _(random)_ | 32-byte hex spending key for recipient                                    |
+| Variable                   | Default      | Description                                                               |
+| -------------------------- | ------------ | ------------------------------------------------------------------------- |
+| `DEPLOY_BLOCK`             | `0`          | Block the ShieldedPool was deployed at (auto-set by `make deploy-plasma`) |
+| `TREE_LEVELS`              | `20`         | Merkle tree depth (must match deployment)                                 |
+| `DEPOSIT_A`                | `0.7`        | First deposit amount in USDT                                              |
+| `DEPOSIT_B`                | `0.3`        | Second deposit amount in USDT                                             |
+| `TRANSFER_AMOUNT`          | `0.5`        | Amount sent to recipient in USDT                                          |
+| `WITHDRAW_AMOUNT`          | `0.3`        | Amount recipient withdraws in USDT                                        |
+| `RECIPIENT_PUBKEY`         | _(random)_   | 32-byte hex spending key for recipient                                    |
+| `RECIPIENT_VIEWING_PUBKEY` | _(derived)_  | 32-byte hex viewing public key for recipient (x25519)                     |
 
 Amounts use human-readable USDT values (e.g., `0.7` = 700,000 raw units with 6 decimals).
 
@@ -142,15 +143,31 @@ Withdraw amount:  0.3 USDT
 === E2E Test Passed! ===
 ```
 
-## Recipient Key
+## Recipient Keys
 
-The `RECIPIENT_PUBKEY` env var is treated as a **spending key** (not a public key). The script derives the actual public key from it using `derive_pubkey(spending_key) = keccak256(spending_key)`.
+### Spending Key (`RECIPIENT_PUBKEY`)
+
+The `RECIPIENT_PUBKEY` env var is treated as a **spending key** (not a public key). The script derives the actual shielded public key from it using `derive_pubkey(spending_key) = keccak256(spending_key)`.
 
 This is because the E2E script needs to know the recipient's spending key in order to build the withdraw proof (proving ownership of the transferred note). In a real application, the sender would only know the recipient's public key, and the recipient would generate their own withdraw proof using their spending key.
 
 **If `RECIPIENT_PUBKEY` is not set**, a random 32-byte key is generated for the test.
 
-To generate a key manually:
+### Viewing Key (`RECIPIENT_VIEWING_PUBKEY`)
+
+The `RECIPIENT_VIEWING_PUBKEY` env var is the recipient's **x25519 viewing public key**. This key is used to encrypt the transferred note so the recipient can detect it by scanning `EncryptedNote` events on-chain.
+
+**If `RECIPIENT_VIEWING_PUBKEY` is not set**, it is derived from the recipient's spending key: `viewing_secret = keccak256("viewing" || spending_key)`, then the x25519 public key is computed from that.
+
+To use the frontend's keys with the e2e script:
+1. Open the frontend with the recipient's MetaMask account
+2. Create a shielded wallet
+3. Copy the **Shielded Public Key** from the Dashboard — but note this is a *derived public key*, not the spending key. The e2e script needs the spending key to generate the withdraw proof.
+4. Copy the **Viewing Public Key** from the Dashboard — set this as `RECIPIENT_VIEWING_PUBKEY`
+
+In practice, the e2e script generates its own keys. Use `RECIPIENT_VIEWING_PUBKEY` when you want the frontend to detect notes created by the e2e script.
+
+### Generating keys manually
 
 ```bash
 # Generate a random 32-byte hex key:
@@ -161,9 +178,19 @@ openssl rand -hex 32
 
 ### Merkle Tree Mirroring
 
-The script maintains a local copy of the on-chain Merkle tree by replaying all `Deposit` events starting from `DEPLOY_BLOCK` (auto-saved to `.env` by `make deploy-plasma`). After inserting all commitments, it asserts the local root matches `getLastRoot()`. This ensures Merkle proofs generated locally will be accepted on-chain.
+The script maintains a local copy of the on-chain Merkle tree by replaying all events (`Deposit`, `PrivateTransfer`, `Withdrawal`) starting from `DEPLOY_BLOCK` (auto-saved to `.env` by `make deploy-plasma`). After inserting all commitments in order, it asserts the local root matches `getLastRoot()`. This ensures Merkle proofs generated locally will be accepted on-chain.
 
 After each operation (transfer, withdraw), the script inserts the new output commitments into the local tree and re-verifies the root.
+
+### Note Encryption
+
+All notes are encrypted using NaCl box (x25519 + XSalsa20-Poly1305) before being submitted on-chain:
+
+- **Deposits**: encrypted with the sender's viewing public key
+- **Transfers**: output note 0 encrypted with recipient's viewing key, output note 1 (change) encrypted with sender's viewing key
+- **Withdrawals**: change note encrypted with the withdrawer's viewing key
+
+The encrypted data is emitted via `EncryptedNote` events. The frontend scans these events, attempts decryption with the user's viewing secret key, and adds successfully decrypted notes to the wallet. This is how users detect incoming private transfers.
 
 ### Proof Generation Flow
 

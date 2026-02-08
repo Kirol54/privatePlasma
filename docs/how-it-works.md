@@ -104,12 +104,20 @@ Privacy in financial transactions is a basic right recognized in most jurisdicti
 
 ### Can I lose my funds?
 
-Your funds are secured by the smart contract on the blockchain. As long as you keep your spending key safe (a 32-byte secret, like a password), nobody can access your funds. If you lose your spending key, your funds are unrecoverable, just like losing the private key to any crypto wallet.
+Your funds are secured by the smart contract on the blockchain. As long as you keep your spending key safe (a 32-byte secret, like a password), nobody can access your funds. If you lose your spending key, your funds are unrecoverable, just like losing the private key to any crypto wallet. You can use the **Export** button in the app to save your wallet (including spending key) to a file for backup.
+
+### How do I receive a private transfer?
+
+To receive funds, you share two public keys with the sender (displayed on the frontend Dashboard):
+1. Your **Shielded Public Key** — tells the ZK circuit to assign the note to you
+2. Your **Viewing Public Key** — lets the sender encrypt the note details so your wallet can detect it
+
+When you click "Sync Tree" in the app, it scans the blockchain for encrypted notes, tries to decrypt each one with your viewing key, and adds any that belong to you. The whole process is automatic.
 
 ### How long do transactions take?
 
 - **Deposit**: Instant (just a regular blockchain transaction)
-- **Private transfer**: 10-60 seconds (proof generation time) + a few seconds for on-chain confirmation
+- **Private transfer**: 2-5 minutes (proof generation time) + a few seconds for on-chain confirmation
 - **Withdraw**: Same as private transfer
 
 ### Who can see my transactions?
@@ -135,4 +143,7 @@ For those curious about what's under the hood:
 - **Smart contracts** (Solidity): Run on Plasma, hold the funds, verify proofs
 - **Zero-knowledge circuits** (Rust / SP1): Define the rules for valid transactions and generate proofs
 - **Client SDK** (TypeScript): Manages keys, builds transactions, talks to the blockchain
+- **Frontend** (React + TypeScript): Browser UI with MetaMask wallet integration
+- **Proxy server** (Express): Bridges the browser to the Rust proof generator
 - **SP1 zkVM**: A virtual machine that runs the proof generation. It can prove that arbitrary Rust code executed correctly without revealing its inputs
+- **NaCl encryption**: Note data is encrypted with x25519 + XSalsa20-Poly1305 for selective disclosure to recipients

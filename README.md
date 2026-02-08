@@ -18,8 +18,10 @@ lib/                  Rust (no_std) — shared types + crypto primitives
 programs/
   transfer/           SP1 guest — 2-in-2-out private transfer circuit
   withdraw/           SP1 guest — withdrawal circuit
-script/               Rust host — proof generation CLI
+script/               Rust host — proof generation CLI + e2e test
 client/               TypeScript SDK — wallet, Merkle tree, prover, pool client
+frontend/             React app — browser UI (Vite + React 18 + TypeScript)
+proxy/                Express server — bridges browser to Rust prover
 tests/                Rust integration tests
 
 Makefile              Build, test, deploy targets (run `make help`)
@@ -30,7 +32,7 @@ Makefile              Build, test, deploy targets (run `make help`)
 
 ### Three Operations
 
-**Deposit** — Public. User approves USDT, calls `deposit(commitment, amount)`. The commitment is inserted into the on-chain Merkle tree. No ZK proof needed.
+**Deposit** — Public. User approves USDT, calls `deposit(commitment, amount, encryptedData)`. The commitment is inserted into the on-chain Merkle tree. The encrypted note data allows the depositor to recover the note via scanning. No ZK proof needed.
 
 **Private Transfer** — A ZK proof shows:
 
@@ -39,13 +41,15 @@ Makefile              Build, test, deploy targets (run `make help`)
 - Two output notes are created with the same total value (conservation)
 - Nullifiers prevent double-spending
 
-The contract sees only nullifiers and output commitments — no amounts, no addresses.
+The contract sees only nullifiers and output commitments — no amounts, no addresses. Each output note is encrypted with the recipient's **viewing public key** and emitted as an `EncryptedNote` event, allowing the recipient to detect incoming transfers by scanning the chain.
 
 **Withdraw** — A ZK proof shows:
 
 - The input note exists in the tree and the sender owns it
 - The withdrawal amount + change = input amount
 - The recipient address is committed inside the proof (prevents front-running)
+
+Any change note is encrypted for the withdrawer's viewing key.
 
 ### Cryptography
 
@@ -100,6 +104,37 @@ The test JSON input files (`fixtures/test_transfer_input.json`, `fixtures/test_w
 
 Run `make help` to see all available targets.
 
+## Frontend App
+
+A React + TypeScript frontend with a dark green theme, providing a complete UI for the shielded pool:
+
+```bash
+# Start the proxy (bridges browser to Rust SP1 prover)
+cd proxy && npm install && SP1_PROVER=network NETWORK_PRIVATE_KEY=? npm start
+
+# Start the frontend
+cd frontend && npm install && npm run dev
+```
+
+### Features
+
+- **MetaMask integration** — connect any Ethereum wallet
+- **Deposit** — convert public USDT to shielded notes
+- **Private Transfer** — send to any recipient using their shielded + viewing public keys (2-in-2-out circuit, requires 2+ notes)
+- **Withdraw** — convert shielded notes back to public USDT
+- **Note scanning** — automatically detects incoming transfers via `EncryptedNote` events
+- **Wallet import/export** — export wallet to JSON file, import from file or spending key
+- **Key sharing** — dashboard displays both shielded pubkey and viewing pubkey (click to copy)
+
+### Two Keys for Receiving
+
+To receive a private transfer, share **both** keys with the sender:
+
+1. **Shielded Public Key** — used in the ZK proof to create a note owned by you
+2. **Viewing Public Key** — used to encrypt the note so you can detect it via scanning
+
+Both keys are displayed on the Dashboard and can be copied with a click.
+
 ## TypeScript SDK
 
 ```typescript
@@ -123,16 +158,17 @@ const client = new ShieldedPoolClient({
 // Deposit 100 USDT into the shielded pool
 await client.deposit(100_000000n); // 6 decimals
 
-// Private transfer to another user
+// Private transfer to another user (requires recipient's viewing pubkey for note encryption)
 await client.privateTransfer(
-	recipientPubkey, // 32 bytes
+	recipientPubkey, // 32 bytes — shielded public key
 	50_000000n,
+	recipientViewingPubkey, // 32 bytes — for encrypting the note
 );
 
 // Withdraw to a public address
 await client.withdraw("0xRecipientAddress", 50_000000n);
 
-// Scan for incoming notes (requires viewing key)
+// Scan for incoming notes (decrypts EncryptedNote events with viewing key)
 await client.sync();
 console.log("Balance:", wallet.getBalance());
 ```
@@ -144,7 +180,7 @@ console.log("Balance:", wallet.getBalance());
 | `crypto.ts`     | keccak256, commitments, nullifiers, key derivation            |
 | `merkle.ts`     | Client-side Merkle tree (mirrors MerkleTree.sol)              |
 | `wallet.ts`     | Spending key management, note tracking, coin selection        |
-| `encryption.ts` | NaCl box encryption for note data                             |
+| `encryption.ts` | NaCl box encryption/decryption for note data + viewing keys   |
 | `prover.ts`     | Wraps the Rust proof generation binary                        |
 | `pool.ts`       | High-level `ShieldedPoolClient` for deposit/transfer/withdraw |
 
@@ -235,26 +271,27 @@ Run the full deposit → private transfer → withdraw lifecycle against a deplo
 make e2e
 ```
 
-This generates two real ZK proofs via the Succinct Prover Network (~2–5 min each), submits them on-chain, and verifies final state (nullifiers, Merkle root, balances).
+This generates two real ZK proofs via the Succinct Prover Network (~2-5 min each), submits them on-chain with encrypted note data, and verifies final state (nullifiers, Merkle root, balances). Notes are encrypted using NaCl box so they can be detected by the recipient's frontend via `EncryptedNote` event scanning.
 
 ### Configurable amounts
 
 Set these in `.env` to customise the test flow (defaults shown):
 
-| Variable           | Default    | Description                   |
-| ------------------ | ---------- | ----------------------------- |
-| `DEPOSIT_A`        | `0.7`      | First deposit (USDT)          |
-| `DEPOSIT_B`        | `0.3`      | Second deposit (USDT)         |
-| `TRANSFER_AMOUNT`  | `0.5`      | Private transfer to recipient |
-| `WITHDRAW_AMOUNT`  | `0.3`      | Recipient withdrawal          |
-| `RECIPIENT_PUBKEY` | _(random)_ | 32-byte hex spending key      |
+| Variable                   | Default     | Description                                                        |
+| -------------------------- | ----------- | ------------------------------------------------------------------ |
+| `DEPOSIT_A`                | `0.7`       | First deposit (USDT)                                               |
+| `DEPOSIT_B`                | `0.3`       | Second deposit (USDT)                                              |
+| `TRANSFER_AMOUNT`          | `0.5`       | Private transfer to recipient                                      |
+| `WITHDRAW_AMOUNT`          | `0.3`       | Recipient withdrawal                                               |
+| `RECIPIENT_PUBKEY`         | _(random)_  | 32-byte hex spending key for recipient                             |
+| `RECIPIENT_VIEWING_PUBKEY` | _(derived)_ | 32-byte hex viewing public key (if not set, derived from spending) |
 
 See **[E2E Test Guide](docs/e2e-test.md)** for the full step-by-step breakdown, example output, and troubleshooting.
 
 ## Documentation
 
-- **[E2E Test Guide](docs/e2e-test.md)** — Full walkthrough of the end-to-end test script. Configuration, example output, how Merkle tree mirroring and proof generation work, and troubleshooting.
-- **[Frontend Integration Guide](docs/frontend-integration.md)** — How to build a user-facing app on top of the SDK. Covers wallet connection, spending key derivation, deposit/transfer/withdraw UI flows, proof generation via the Succinct Prover Network, and a minimal React example.
+- **[E2E Test Guide](docs/e2e-test.md)** — Full walkthrough of the end-to-end test script. Configuration (including recipient viewing keys), example output, Merkle tree mirroring, proof generation, and troubleshooting.
+- **[Frontend Integration Guide](docs/frontend-integration.md)** — How to build a user-facing app on top of the SDK. Covers wallet connection, viewing keys, note encryption/scanning, deposit/transfer/withdraw UI flows, wallet import/export, and a minimal React example.
 - **[How It Works (Non-Technical)](docs/how-it-works.md)** — Plain-language explanation for non-developers. What the project does, why privacy matters, how the sealed-envelope analogy works, use cases, and FAQ.
 
 ## License

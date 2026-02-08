@@ -1,362 +1,181 @@
 # Frontend Integration Guide
 
-How to build a user-facing application on top of the Plasma Shielded Pool.
+How to run and extend the Plasma Shielded Pool frontend application.
 
-## Overview
+## Architecture
 
-A frontend app interacts with the shielded pool through the TypeScript SDK (`@shielded-pool/client`). The SDK handles all cryptography, Merkle tree tracking, proof generation, and contract calls. The frontend only needs to manage UI, wallet connection, and call SDK methods.
+The frontend consists of two components:
 
-Proofs are generated via the **Succinct Prover Network** — a decentralized proving service. No backend server needed.
+1. **React Frontend** (`frontend/`) — Vite + React 18 + TypeScript, dark green theme
+2. **Express Proxy** (`proxy/`) — bridges the browser to the Rust SP1 prover binary
 
 ```
 +-------------------+       +-------------------+       +------------------+
 |                   |       |                   |       |                  |
-|   React / Next.js | ----> | @shielded-pool/   | ----> |  ShieldedPool    |
-|   Frontend        |       |    client SDK     |       |  Smart Contract  |
-|                   |       |                   |       |  (on Plasma)     |
+|   React Frontend  | ----> |  Express Proxy    | ----> |  Rust SP1 Prover |
+|   (Vite + React)  |       |  (proxy/)         |       |  (script/)       |
+|                   |       |                   |       |                  |
 +-------------------+       +-------------------+       +------------------+
-        |                           |
-        v                           v
-   Browser Wallet           Succinct Prover Network
-   (MetaMask)               (decentralized proving)
+        |                                                       |
+        v                                                       v
+   Browser Wallet                                    Succinct Prover Network
+   (MetaMask)                                        (Groth16 proof generation)
+        |
+        v
+   ShieldedPool Smart Contract (on Plasma)
 ```
+
+The proxy receives proof requests from the browser, invokes the Rust SP1 prover binary as a subprocess, and returns the proof. This keeps the `NETWORK_PRIVATE_KEY` (Succinct API key) on the server side.
+
+## Quick Start
+
+```bash
+# 1. Start the proxy server (runs on port 3001)
+cd proxy && npm install && npm run dev
+
+# 2. Start the frontend dev server (runs on port 5173)
+cd frontend && npm install && npm run dev
+```
+
+Configure `frontend/.env` with your deployed contract addresses:
+
+```env
+VITE_POOL_ADDRESS=0x...
+VITE_TOKEN_ADDRESS=0x...
+VITE_RPC_URL=https://testnet-rpc.plasma.to
+VITE_PROXY_URL=http://localhost:3001
+VITE_DEPLOY_BLOCK=0
+VITE_TREE_LEVELS=20
+```
+
+## Key Concepts
+
+### Two Types of Keys
+
+Each shielded wallet has two key pairs:
+
+| Key | Derivation | Purpose |
+|-----|-----------|---------|
+| **Spending key** (secret) | Random 32 bytes | Controls all funds — can spend notes |
+| **Shielded public key** | `keccak256(spending_key)` | Used in note commitments to assign ownership |
+| **Viewing secret key** | `keccak256("viewing" \|\| spending_key)` | Decrypts incoming notes |
+| **Viewing public key** | x25519 pubkey from viewing secret | Shared with senders for note encryption |
+
+To receive a private transfer, share **both** public keys:
+1. **Shielded Public Key** — used in the ZK circuit to create a note owned by you
+2. **Viewing Public Key** — used to NaCl-box encrypt the note data so you can detect it
+
+### Note Encryption & Scanning
+
+When a private transfer is submitted, the sender encrypts each output note:
+- Output note 0 (recipient's note) encrypted with **recipient's viewing public key**
+- Output note 1 (sender's change) encrypted with **sender's viewing public key**
+
+The encrypted data is emitted via `EncryptedNote(bytes32 commitment, bytes encryptedData)` events.
+
+During `sync()`, the frontend:
+1. Fetches all `EncryptedNote` events
+2. Tries to decrypt each one with the user's viewing secret key
+3. If decryption succeeds, verifies the commitment matches
+4. Adds the note to the wallet
+
+### 2-in-2-out Transfer Circuit
+
+The transfer ZK circuit requires exactly **2 input notes** and produces **2 output notes**. This means:
+- Users need at least 2 spendable notes to do a private transfer
+- If they only have 1 note, they should make another deposit first (or use withdraw instead)
+- The UI shows a warning when the user has fewer than 2 notes
+
+### Wallet Import/Export
+
+The frontend supports wallet portability:
+
+- **Export**: Downloads a JSON file containing the spending key and all tracked notes
+- **Import from file**: Upload a previously exported wallet JSON file
+- **Import from key**: Paste a 32-byte hex spending key directly
+
+The exported JSON uses the same format as `localStorage` persistence (via `BrowserShieldedWallet.toJSON()`).
 
 ## Proof Generation & Trust Model
 
-### Two different keys
-
-The system uses two completely separate keys. Don't confuse them:
-
-| Key                                     | What it is                                                 | Who holds it      |
-| --------------------------------------- | ---------------------------------------------------------- | ----------------- |
-| **Wallet private key** (MetaMask)       | Signs on-chain transactions                                | The user          |
-| **SP1 API key** (`NETWORK_PRIVATE_KEY`) | Authorizes proof generation on the Succinct Prover Network | The app developer |
-
-The SP1 API key is like an Infura or Alchemy key — a service credential for the developer, not a user secret. Get one at [network.succinct.xyz](https://network.succinct.xyz).
-
-### How proof generation works
+### How it works
 
 1. User initiates a transfer or withdrawal in the UI
-2. The SDK builds the proof inputs (notes, Merkle proofs, spending key) — **all in the browser**
-3. The SDK sends these inputs to the Succinct Prover Network using the developer's SP1 API key
-4. Succinct generates the Groth16 proof (~30-60 seconds)
-5. The proof comes back to the browser
-6. MetaMask pops up — the user signs the on-chain transaction containing the proof
-
-The developer pays for proof generation (Succinct bills per proof). The user never sees or needs the SP1 key.
-
-### Hackathon approach: embed the API key
-
-For the hackathon, we embed the SP1 API key directly in the frontend code:
-
-```typescript
-const SP1_API_KEY = "your-succinct-api-key-here";
-
-const client = new ShieldedPoolClient(wallet, {
-	poolAddress: POOL_ADDRESS,
-	tokenAddress: USDT_ADDRESS,
-	signer,
-	proverOptions: {
-		proverNetwork: true,
-		sp1ApiKey: SP1_API_KEY,
-	},
-});
-```
-
-This is fine for a hackathon demo. In production, you'd proxy proof requests through a lightweight backend to keep the API key secret and add rate limiting.
+2. The browser builds proof inputs (notes, Merkle proofs, spending key)
+3. Inputs are sent to the Express proxy via HTTP POST
+4. The proxy invokes the Rust SP1 prover binary as a subprocess
+5. The prover sends inputs to the Succinct Prover Network for Groth16 proving
+6. The proof comes back through the proxy to the browser
+7. MetaMask pops up — the user signs the on-chain transaction
 
 ### Privacy tradeoff
 
-When the SDK sends proof inputs to the Succinct Prover Network, the prover infrastructure **can see** the raw inputs (note amounts, spending keys, etc.) during proof generation. The resulting proof reveals nothing, but the proving service itself is trusted.
+The Succinct Prover Network can see raw inputs during proof generation. The resulting proof reveals nothing, but the proving service itself is trusted.
 
-| Approach                                   | Privacy                          | Performance        | Practical?       |
-| ------------------------------------------ | -------------------------------- | ------------------ | ---------------- |
-| **Succinct Prover Network** (our approach) | Trust Succinct's secure enclaves | ~30-60s            | Yes              |
-| Client-side local proving                  | Fully trustless                  | ~16GB RAM, minutes | Not in a browser |
+| Approach | Privacy | Performance | Practical? |
+|----------|---------|-------------|------------|
+| **Succinct Prover Network** (our approach) | Trust Succinct's secure enclaves | ~2-5 min | Yes |
+| Client-side local proving | Fully trustless | ~16GB RAM, minutes | Not in a browser |
 
-For the hackathon, this is the right tradeoff. Succinct's provers run in secure enclaves and don't log inputs. In a production system, client-side proving would be ideal once hardware/WASM support matures.
+## Frontend Components
 
-Show a loading spinner in the UI during proof generation (~30-60 seconds).
+### Dashboard (`Dashboard.tsx`)
 
-## Spending Key Management
+Displays:
+- Shielded and public token balances
+- Shielded Public Key (click to copy)
+- Viewing Public Key (click to copy)
+- Spendable note count and tree leaf count
+- Sync, Export, and Reset buttons
 
-The spending key is the master secret. Whoever holds it can spend all notes. The recommended approach is to **derive it from a wallet signature** — deterministic, no separate backup:
+On first load (no wallet), shows Create/Import options.
 
-```typescript
-import { ShieldedWallet, keccak256 } from "@shielded-pool/client";
-import { ethers } from "ethers";
+### DepositForm (`DepositForm.tsx`)
 
-async function createWalletFromSignature(
-	signer: ethers.Signer,
-): Promise<ShieldedWallet> {
-	const message = "Shielded Pool Spending Key Derivation v1";
-	const signature = await signer.signMessage(message);
-	const spendingKey = keccak256(ethers.getBytes(signature));
-	return new ShieldedWallet(spendingKey);
-}
-```
+- Amount input in USDT
+- Handles ERC20 approve + deposit in sequence
+- Note is encrypted with sender's viewing key for self-recovery
 
-Same wallet always yields the same spending key. User reconnects with the same MetaMask account and gets the same shielded identity.
+### TransferForm (`TransferForm.tsx`)
 
-## State Persistence
+- Requires **Recipient Shielded Public Key** and **Recipient Viewing Public Key**
+- Amount input in USDT
+- Shows warning banner if user has < 2 spendable notes
+- Encrypts recipient's note with their viewing key, change note with sender's viewing key
 
-The wallet tracks owned notes and spent nullifiers. Persist across sessions with `localStorage`:
+### WithdrawForm (`WithdrawForm.tsx`)
 
-```typescript
-// Save
-localStorage.setItem("shielded-wallet", wallet.toJSON());
+- Recipient Ethereum address and amount
+- Change note encrypted with sender's viewing key
 
-// Restore (on page load, rebuild Merkle tree from on-chain events)
-await client.sync();
-```
+### NotesList (`NotesList.tsx`)
 
-The Merkle tree is always rebuilt from on-chain events via `client.sync()`. Only wallet note state needs persistence.
+- Table of all notes (active and spent)
+- Shows amount, leaf index, commitment prefix, and status badge
 
-## Step-by-Step: Building the Frontend
+## State Management
 
-### 1. Install the SDK
+### ShieldedContext (`context/ShieldedContext.tsx`)
 
-```bash
-npm install @shielded-pool/client ethers
-```
+React context providing:
+- `shieldedWallet` — `BrowserShieldedWallet` instance
+- `poolClient` — `BrowserPoolClient` instance
+- Balance, notes, tree state
+- Actions: `initWallet`, `importWallet`, `exportWallet`, `resetWallet`, `sync`, `deposit`, `privateTransfer`, `withdraw`
 
-### 2. Initialize on page load
+### Persistence
 
-```typescript
-import { ShieldedPoolClient, ShieldedWallet } from "@shielded-pool/client";
-import { ethers } from "ethers";
-
-const POOL_ADDRESS = "0x..."; // Deployed ShieldedPool address
-const USDT_ADDRESS = "0x..."; // USDT on Plasma
-
-async function init() {
-	// Connect wallet (MetaMask, WalletConnect, etc.)
-	const provider = new ethers.BrowserProvider(window.ethereum);
-	const signer = await provider.getSigner();
-
-	// Derive spending key from wallet signature
-	const wallet = await createWalletFromSignature(signer);
-
-	// Create pool client
-	const client = new ShieldedPoolClient(wallet, {
-		poolAddress: POOL_ADDRESS,
-		tokenAddress: USDT_ADDRESS,
-		signer,
-	});
-
-	// Sync Merkle tree from on-chain events
-	await client.sync();
-
-	return { client, wallet };
-}
-```
-
-### 3. Show balance
-
-```typescript
-function showBalance(wallet: ShieldedWallet) {
-	const balance = wallet.getBalance();
-	// USDT has 6 decimals
-	const formatted = (Number(balance) / 1_000_000).toFixed(2);
-	return `$${formatted} USDT`;
-}
-```
-
-### 4. Deposit flow
-
-The user deposits public USDT into the shielded pool. After this, their tokens are private.
-
-```typescript
-async function handleDeposit(client: ShieldedPoolClient, amountUsdt: number) {
-	const amount = BigInt(Math.round(amountUsdt * 1_000_000)); // 6 decimals
-
-	// This will:
-	// 1. Create a note commitment
-	// 2. Approve USDT spending
-	// 3. Call deposit() on the contract
-	// 4. Track the note locally
-	const receipt = await client.deposit(amount);
-
-	return receipt.hash; // transaction hash
-}
-```
-
-**UI flow:**
-
-1. User enters amount (e.g., "100 USDT")
-2. MetaMask popup: approve USDT spending
-3. MetaMask popup: deposit transaction
-4. Show confirmation with tx hash
-5. Update displayed balance
-
-### 5. Private transfer flow
-
-The user sends USDT privately to another user. The recipient is identified by their **public key** (not their Ethereum address).
-
-```typescript
-import { hexToBytes } from "@shielded-pool/client";
-
-async function handleTransfer(
-	client: ShieldedPoolClient,
-	recipientPubkeyHex: string,
-	amountUsdt: number,
-) {
-	const amount = BigInt(Math.round(amountUsdt * 1_000_000));
-	const recipientPubkey = hexToBytes(recipientPubkeyHex);
-
-	// This will:
-	// 1. Select input notes from wallet
-	// 2. Create output notes (recipient + change)
-	// 3. Generate ZK proof via Succinct Prover Network (~30-60s)
-	// 4. Submit transaction
-	// 5. Update local state
-	const receipt = await client.privateTransfer(recipientPubkey, amount);
-
-	return receipt.hash;
-}
-```
-
-**UI flow:**
-
-1. User enters recipient's public key and amount
-2. Show "Generating proof..." spinner (~30-60 seconds)
-3. MetaMask popup: submit transfer transaction
-4. Show confirmation
-5. Update balance (deducted amount + any change returned)
-
-### 6. Withdraw flow
-
-The user converts private USDT back to public USDT, sent to any address.
-
-```typescript
-async function handleWithdraw(
-	client: ShieldedPoolClient,
-	recipientAddress: string,
-	amountUsdt: number,
-) {
-	const amount = BigInt(Math.round(amountUsdt * 1_000_000));
-
-	// This will:
-	// 1. Select an input note
-	// 2. Create change note if partial withdrawal
-	// 3. Generate ZK proof via Succinct Prover Network (~30-60s)
-	// 4. Submit transaction (tokens sent to recipientAddress)
-	// 5. Update local state
-	const receipt = await client.withdraw(amount, recipientAddress);
-
-	return receipt.hash;
-}
-```
-
-### 7. Sharing your public key
-
-For others to send you private transfers, they need your **public key** (not your address). Display it in the UI:
-
-```typescript
-import { bytesToHex } from "@shielded-pool/client";
-
-function getMyPublicKey(wallet: ShieldedWallet): string {
-	return bytesToHex(wallet.pubkey);
-}
-// Returns something like: "0x1a2b3c4d...64 hex chars"
-```
-
-Users can share this via QR code, clipboard copy, or messaging.
-
-## Scanning for Incoming Notes
-
-When someone sends you a private transfer, you need to scan for it. The SDK does this by:
-
-1. Fetching encrypted note data from on-chain events
-2. Attempting decryption with your viewing key
-3. If decryption succeeds, the note belongs to you
-
-```typescript
-import { decryptNote, deriveViewingKeypair } from "@shielded-pool/client";
-
-async function scanForMyNotes(
-	client: ShieldedPoolClient,
-	wallet: ShieldedWallet,
-) {
-	const viewingKeypair = deriveViewingKeypair(wallet.getSpendingKey());
-	const tree = client.getTree();
-
-	for (let i = 0; i < tree.nextIndex; i++) {
-		const encrypted = await pool.getEncryptedNote(i);
-		if (encrypted.length === 0) continue;
-
-		const note = decryptNote(encrypted, viewingKeypair.secretKey);
-		if (note) {
-			wallet.addNote(note, i);
-		}
-	}
-}
-```
-
-## Example: Minimal React Component
-
-```tsx
-function ShieldedPool() {
-	const [balance, setBalance] = useState("0.00");
-	const [loading, setLoading] = useState(false);
-	const [client, setClient] = useState<ShieldedPoolClient | null>(null);
-	const [wallet, setWallet] = useState<ShieldedWallet | null>(null);
-
-	async function connect() {
-		const { client, wallet } = await init();
-		setClient(client);
-		setWallet(wallet);
-		setBalance((Number(wallet.getBalance()) / 1e6).toFixed(2));
-	}
-
-	async function deposit(amount: number) {
-		if (!client) return;
-		setLoading(true);
-		await client.deposit(BigInt(amount * 1e6));
-		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-		setLoading(false);
-	}
-
-	async function transfer(pubkey: string, amount: number) {
-		if (!client) return;
-		setLoading(true);
-		await client.privateTransfer(hexToBytes(pubkey), BigInt(amount * 1e6));
-		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-		setLoading(false);
-	}
-
-	async function withdraw(address: string, amount: number) {
-		if (!client) return;
-		setLoading(true);
-		await client.withdraw(BigInt(amount * 1e6), address);
-		setBalance((Number(wallet!.getBalance()) / 1e6).toFixed(2));
-		setLoading(false);
-	}
-
-	return (
-		<div>
-			{!client ? (
-				<button onClick={connect}>Connect Wallet</button>
-			) : (
-				<div>
-					<p>Shielded Balance: ${balance} USDT</p>
-					<p>My Public Key: {bytesToHex(wallet!.pubkey)}</p>
-					{loading && <p>Generating proof...</p>}
-					{/* Add forms for deposit, transfer, withdraw here */}
-				</div>
-			)}
-		</div>
-	);
-}
-```
+Wallet state is persisted to `localStorage` under key `shielded-pool-wallet`. On page load:
+1. Wallet is restored from localStorage (spending key + notes + spent nullifiers)
+2. On first sync, the Merkle tree is rebuilt from on-chain events
+3. `EncryptedNote` events are scanned for incoming notes
+4. On-chain nullifier spent status is checked
 
 ## Deployment Checklist
 
-1. Deploy contracts: `make deploy-plasma` (see project root Makefile)
-2. Note the deployed `ShieldedPool` address from the output
-3. Get an SP1 API key from [network.succinct.xyz](https://network.succinct.xyz)
-4. Configure frontend with contract addresses and SP1 API key
-5. Test the full flow: deposit, transfer, withdraw
-6. Add loading states for proof generation (~30-60s)
-7. Implement note scanning for incoming transfers
-8. Add wallet state persistence (localStorage)
+1. Deploy contracts: `make deploy-plasma`
+2. Note the deployed `ShieldedPool` address and set in `frontend/.env`
+3. Set `NETWORK_PRIVATE_KEY` in `proxy/.env` (Succinct API key)
+4. Start proxy: `cd proxy && npm run dev`
+5. Start frontend: `cd frontend && npm run dev`
+6. Test full flow: deposit (x2) → transfer → recipient sync → withdraw
