@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WalletProvider, useWallet } from './context/WalletContext';
 import { ShieldedProvider } from './context/ShieldedContext';
 import { ConnectWallet } from './components/ConnectWallet';
@@ -8,9 +8,51 @@ import { TransferForm } from './components/TransferForm';
 import { WithdrawForm } from './components/WithdrawForm';
 import { NotesList } from './components/NotesList';
 import { LandingPage } from './components/LandingPage';
-import { ProxySettingsModal } from './components/ProxySettingsModal'; // Import logic
+import { ProxySettingsModal } from './components/ProxySettingsModal';
+import { getProxyUrl } from './lib/settings';
 
 type Tab = 'deposit' | 'transfer' | 'withdraw' | 'notes';
+
+/* ── Subtle proxy health toast ───────────────────────────────────────── */
+
+function ProxyBanner({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const url = getProxyUrl();
+    console.log(`Checking proof generation proxy health at ${url}/health...`);
+    let cancelled = false;
+    fetch(`${url}/health`)
+      .then((res) => {
+        if (!cancelled && !res.ok) setVisible(true);
+      })
+      .catch(() => {
+        if (!cancelled) setVisible(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="proxy-toast">
+      <span className="proxy-toast-dot" />
+      <span>Proxy offline — proof generation unavailable</span>
+      <button className="proxy-toast-btn" onClick={onOpenSettings}>
+        Configure
+      </button>
+      <button
+        className="proxy-toast-close"
+        onClick={() => setVisible(false)}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+/* ── Main app ────────────────────────────────────────────────────────── */
 
 function AppContent() {
   const { address } = useWallet();
@@ -18,7 +60,7 @@ function AppContent() {
   const [showLanding, setShowLanding] = useState(
     () => !sessionStorage.getItem('hideLanding')
   );
-  const [showSettings, setShowSettings] = useState(false); // Settings state
+  const [showSettings, setShowSettings] = useState(false);
 
   const goToLanding = () => {
     sessionStorage.removeItem('hideLanding');
@@ -68,6 +110,7 @@ function AppContent() {
           <p>Private payments on Plasma</p>
         </div>
         <ConnectWallet />
+        <ProxyBanner onOpenSettings={() => setShowSettings(true)} />
         {showSettings && <ProxySettingsModal onClose={() => setShowSettings(false)} />}
       </div>
     );
@@ -106,6 +149,7 @@ function AppContent() {
       {activeTab === 'withdraw' && <WithdrawForm />}
       {activeTab === 'notes' && <NotesList />}
 
+      <ProxyBanner onOpenSettings={() => setShowSettings(true)} />
       {showSettings && <ProxySettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );

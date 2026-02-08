@@ -13,19 +13,19 @@
     </linearGradient>
 
     <!-- Shield gradients -->
-    <linearGradient id="shieldOuter" x1="350" y1="370" x2="674" y2="865" gradientUnits="userSpaceOnUse">
+    <linearGradient id="shieldOuter" x1="327" y1="390" x2="697" y2="865" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#18D38F"/>
       <stop offset="0.35" stop-color="#0B6B57"/>
       <stop offset="1" stop-color="#062A25"/>
     </linearGradient>
 
-    <linearGradient id="shieldInner" x1="390" y1="420" x2="634" y2="820" gradientUnits="userSpaceOnUse">
+    <linearGradient id="shieldInner" x1="392" y1="440" x2="632" y2="802" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#0B5A4A"/>
       <stop offset="1" stop-color="#041A18"/>
     </linearGradient>
 
     <!-- Rim -->
-    <linearGradient id="rim" x1="360" y1="390" x2="664" y2="860" gradientUnits="userSpaceOnUse">
+    <linearGradient id="rim" x1="342" y1="400" x2="682" y2="850" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#55F2C2"/>
       <stop offset="0.5" stop-color="#2CCF97"/>
       <stop offset="1" stop-color="#0B6B57"/>
@@ -33,18 +33,18 @@
 
     <!-- Halo -->
     <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
-      gradientTransform="translate(512 690) rotate(90) scale(230 230)">
+      gradientTransform="translate(512 650) rotate(90) scale(250 250)">
       <stop offset="0" stop-color="#49F2B6" stop-opacity="0.30"/>
       <stop offset="0.6" stop-color="#49F2B6" stop-opacity="0.10"/>
       <stop offset="1" stop-color="#49F2B6" stop-opacity="0"/>
     </radialGradient>
 
     <!-- Envelope -->
-    <linearGradient id="envFill" x1="420" y1="610" x2="604" y2="740" gradientUnits="userSpaceOnUse">
+    <linearGradient id="envFill" x1="396" y1="590" x2="628" y2="736" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#B8FFF1"/>
       <stop offset="1" stop-color="#45E2B6"/>
     </linearGradient>
-    <linearGradient id="envStroke" x1="420" y1="610" x2="604" y2="740" gradientUnits="userSpaceOnUse">
+    <linearGradient id="envStroke" x1="396" y1="590" x2="628" y2="736" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#1ED59A"/>
       <stop offset="1" stop-color="#0B6B57"/>
     </linearGradient>
@@ -77,51 +77,60 @@
   </text>
 
   <!-- Halo -->
-  <circle cx="512" cy="690" r="230" fill="url(#halo)"/>
+  <circle cx="512" cy="650" r="250" fill="url(#halo)"/>
 
-  <!-- Shield -->
+  <!-- Shield — wider, shorter proportions (~1.25:1) -->
   <g filter="url(#shadow)">
-    <!-- Outer -->
-    <path d="M512 380
-             C438 425 352 430 352 430
-             V670
-             C352 810 444 890 512 920
-             C580 890 672 810 672 670
-             V430
-             C672 430 586 425 512 380 Z"
+    <!-- Outer: w=370 (327..697), h=460 (390..850) -->
+    <path d="M512 390
+             C430 420 327 428 327 428
+             V650
+             C327 770 430 840 512 865
+             C594 840 697 770 697 650
+             V428
+             C697 428 594 420 512 390 Z"
           fill="url(#shieldOuter)"/>
 
     <!-- Rim -->
-    <path d="M512 388
-             C444 430 365 435 365 435
-             V668
-             C365 800 451 875 512 903
-             C573 875 659 800 659 668
-             V435
-             C659 435 580 430 512 388 Z"
+    <path d="M512 400
+             C436 428 342 434 342 434
+             V648
+             C342 760 440 826 512 850
+             C584 826 682 760 682 648
+             V434
+             C682 434 588 428 512 400 Z"
           fill="none"
           stroke="url(#rim)"
           stroke-width="14"/>
 
     <!-- Inner -->
-    <path d="M512 430
-             C465 462 410 466 410 466
-             V665
-             C410 760 470 812 512 832
-             C554 812 614 760 614 665
-             V466
-             C614 466 559 462 512 430 Z"
+    <path d="M512 440
+             C458 464 392 470 392 470
+             V645
+             C392 730 458 784 512 802
+             C566 784 632 730 632 645
+             V470
+             C632 470 566 464 512 440 Z"
           fill="url(#shieldInner)"/>
+
+    <!-- Center light beam -->
+    <path d="M512 460
+             C512 460 524 530 524 620
+             C524 710 512 770 512 770
+             C512 770 500 710 500 620
+             C500 530 512 460 512 460 Z"
+          fill="#69F7C9"
+          opacity="0.12"/>
 
     <!-- Envelope -->
     <g>
-      <rect x="404" y="610" width="216" height="140" rx="22"
+      <rect x="396" y="590" width="232" height="146" rx="22"
             fill="url(#envFill)" stroke="url(#envStroke)" stroke-width="6"/>
-      <path d="M422 640 L512 705 L602 640"
+      <path d="M416 618 L512 685 L608 618"
             stroke="#073A34" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M422 732 L480 690"
+      <path d="M416 718 L476 678"
             stroke="#073A34" stroke-width="8" stroke-linecap="round" opacity="0.3"/>
-      <path d="M602 732 L544 690"
+      <path d="M608 718 L548 678"
             stroke="#073A34" stroke-width="8" stroke-linecap="round" opacity="0.3"/>
     </g>
   </g>

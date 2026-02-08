@@ -28,7 +28,7 @@ const PORT = process.env.PORT || 3001;
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dirname, '..');
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', projectDir: PROJECT_DIR });
+  res.status(200).json({ status: 'ok' });
 });
 
 /**

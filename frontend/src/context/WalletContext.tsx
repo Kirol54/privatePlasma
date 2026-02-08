@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { BrowserProvider, type Signer } from 'ethers';
+import { config } from '../config';
 
 interface WalletState {
   address: string | null;
@@ -38,8 +39,48 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const ensureCorrectChain = useCallback(async (ethereum: any): Promise<boolean> => {
+    const targetChainHex = '0x' + config.chainId.toString(16);
+
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: targetChainHex }],
+      });
+      return true;
+    } catch (switchError: any) {
+      // 4902 = chain not added to MetaMask yet
+      if (switchError.code === 4902) {
+        try {
+          await ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: targetChainHex,
+              chainName: config.chainName,
+              rpcUrls: [config.chainRpcUrl],
+              blockExplorerUrls: [config.blockExplorerUrl],
+              nativeCurrency: config.nativeCurrency,
+            }],
+          });
+          return true;
+        } catch (addError: any) {
+          setError(`Failed to add ${config.chainName}: ${addError.message}`);
+          return false;
+        }
+      }
+      // User rejected the switch
+      if (switchError.code === 4001) {
+        setError(`Please switch to ${config.chainName} to use this app.`);
+        return false;
+      }
+      setError(`Failed to switch network: ${switchError.message}`);
+      return false;
+    }
+  }, []);
+
   const connect = useCallback(async () => {
-    if (!(window as any).ethereum) {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) {
       setError('MetaMask not found. Please install MetaMask.');
       return;
     }
@@ -48,23 +89,39 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      const browserProvider = new BrowserProvider((window as any).ethereum);
-      await browserProvider.send('eth_requestAccounts', []);
+      // 1. Request accounts
+      await ethereum.request({ method: 'eth_requestAccounts' });
 
+      // 2. Ensure correct chain
+      const chainOk = await ensureCorrectChain(ethereum);
+      if (!chainOk) {
+        setIsConnecting(false);
+        return;
+      }
+
+      // 3. Create provider + signer after chain switch
+      const browserProvider = new BrowserProvider(ethereum);
       const signer = await browserProvider.getSigner();
       const address = await signer.getAddress();
       const network = await browserProvider.getNetwork();
 
+      const currentChainId = Number(network.chainId);
+      if (currentChainId !== config.chainId) {
+        setError(`Wrong network (chain ${currentChainId}). Please switch to ${config.chainName}.`);
+        setIsConnecting(false);
+        return;
+      }
+
       setProvider(browserProvider);
       setSigner(signer);
       setAddress(address);
-      setChainId(Number(network.chainId));
+      setChainId(currentChainId);
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [ensureCorrectChain]);
 
   const disconnect = useCallback(() => {
     setAddress(null);
@@ -87,9 +144,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const handleChainChanged = () => {
-      // Reconnect on chain change
-      connect();
+    const handleChainChanged = (chainIdHex: string) => {
+      const newChainId = parseInt(chainIdHex, 16);
+      if (newChainId !== config.chainId) {
+        // User switched away — disconnect and show error
+        disconnect();
+        setError(`Switched to wrong network (chain ${newChainId}). Please reconnect to use ${config.chainName}.`);
+      } else {
+        // Switched back to correct chain — reconnect
+        connect();
+      }
     };
 
     ethereum.on('accountsChanged', handleAccountsChanged);

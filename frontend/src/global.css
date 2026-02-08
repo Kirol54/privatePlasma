@@ -388,6 +388,78 @@ body {
   color: var(--accent-dim);
 }
 
+/* ─── Proxy Toast ──────────────────────────────────────────────────── */
+
+.proxy-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  z-index: 900;
+  animation: toast-slide-in 0.35s ease-out;
+  max-width: 420px;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.proxy-toast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warning, #fbbf24);
+  flex-shrink: 0;
+}
+
+.proxy-toast-btn {
+  background: none;
+  border: none;
+  color: var(--accent-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  flex-shrink: 0;
+}
+
+.proxy-toast-btn:hover {
+  color: var(--accent);
+}
+
+.proxy-toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  flex-shrink: 0;
+}
+
+.proxy-toast-close:hover {
+  color: var(--text-primary);
+}
+
 /* ─── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 480px) {
