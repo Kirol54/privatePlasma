@@ -14,10 +14,15 @@ type Tab = 'deposit' | 'transfer' | 'withdraw' | 'notes';
 function AppContent() {
   const { address } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
-  const [showLanding, setShowLanding] = useState(true);
+  const [showLanding, setShowLanding] = useState(
+    () => !sessionStorage.getItem('hideLanding')
+  );
 
   if (!address && showLanding) {
-    return <LandingPage onLaunchApp={() => setShowLanding(false)} />;
+    return <LandingPage onLaunchApp={() => {
+      sessionStorage.setItem('hideLanding', '1');
+      setShowLanding(false);
+    }} />;
   }
 
   if (!address) {

@@ -13,6 +13,9 @@ target/
 node_modules/
 client/dist/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # SP1
 programs/transfer/elf/
 programs/withdraw/elf/
