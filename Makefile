@@ -55,7 +55,7 @@ vkeys: ## Print SP1 verification keys for contract deployment
 anvil: ## Start local Anvil node
 	anvil
 
-deploy-local: ## Deploy to local Anvil (uses .env), saves POOL_ADDRESS + DEPLOY_BLOCK to .env
+deploy-local: ## Deploy to local Anvil (uses .env)
 	forge script deploy/Deploy.s.sol \
 		--rpc-url http://127.0.0.1:8545 \
 		--broadcast
@@ -63,20 +63,15 @@ deploy-local: ## Deploy to local Anvil (uses .env), saves POOL_ADDRESS + DEPLOY_
 	if [ -n "$$BROADCAST" ]; then \
 		ADDR=$$(python3 -c "import json; d=json.load(open('$$BROADCAST')); print(d['receipts'][0]['contractAddress'])"); \
 		BLOCK=$$(python3 -c "import json; d=json.load(open('$$BROADCAST')); print(int(d['receipts'][0]['blockNumber'],16))"); \
-		sed -i '' "s|^POOL_ADDRESS=.*|POOL_ADDRESS=$$ADDR|" .env; \
-		if grep -q '^DEPLOY_BLOCK=' .env; then \
-			sed -i '' "s|^DEPLOY_BLOCK=.*|DEPLOY_BLOCK=$$BLOCK|" .env; \
-		else \
-			sed -i '' "/^POOL_ADDRESS=/a\\
-DEPLOY_BLOCK=$$BLOCK" .env; \
-		fi; \
 		echo ""; \
-		echo "  ✓ Saved to .env:"; \
+		echo "  Deploy complete! Update your .env with:"; \
+		echo ""; \
 		echo "    POOL_ADDRESS=$$ADDR"; \
 		echo "    DEPLOY_BLOCK=$$BLOCK"; \
+		echo ""; \
 	fi
 
-deploy-plasma: ## Deploy to Plasma network (uses .env), saves POOL_ADDRESS + DEPLOY_BLOCK to .env
+deploy-plasma: ## Deploy to Plasma network (uses .env)
 	@test -n "$(RPC_URL)" || (echo "Error: RPC_URL not set. Copy .env.example to .env and configure it." && exit 1)
 	forge script deploy/Deploy.s.sol \
 		--rpc-url $(RPC_URL) \
@@ -85,17 +80,12 @@ deploy-plasma: ## Deploy to Plasma network (uses .env), saves POOL_ADDRESS + DEP
 	if [ -n "$$BROADCAST" ]; then \
 		ADDR=$$(python3 -c "import json; d=json.load(open('$$BROADCAST')); print(d['receipts'][0]['contractAddress'])"); \
 		BLOCK=$$(python3 -c "import json; d=json.load(open('$$BROADCAST')); print(int(d['receipts'][0]['blockNumber'],16))"); \
-		sed -i '' "s|^POOL_ADDRESS=.*|POOL_ADDRESS=$$ADDR|" .env; \
-		if grep -q '^DEPLOY_BLOCK=' .env; then \
-			sed -i '' "s|^DEPLOY_BLOCK=.*|DEPLOY_BLOCK=$$BLOCK|" .env; \
-		else \
-			sed -i '' "/^POOL_ADDRESS=/a\\
-DEPLOY_BLOCK=$$BLOCK" .env; \
-		fi; \
 		echo ""; \
-		echo "  ✓ Saved to .env:"; \
+		echo "  Deploy complete! Update your .env with:"; \
+		echo ""; \
 		echo "    POOL_ADDRESS=$$ADDR"; \
 		echo "    DEPLOY_BLOCK=$$BLOCK"; \
+		echo ""; \
 	fi
 		
 # ---------- Prove ----------
