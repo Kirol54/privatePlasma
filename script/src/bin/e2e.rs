@@ -17,13 +17,15 @@
 //!   NETWORK_PRIVATE_KEY   — Succinct Prover Network API key
 //!
 //! Optional env vars:
-//!   TREE_LEVELS       — Merkle tree depth (default: 20)
-//!   DEPOSIT_A         — First deposit in USDT (default: 0.7)
-//!   DEPOSIT_B         — Second deposit in USDT (default: 0.3)
-//!   TRANSFER_AMOUNT   — Amount to send to recipient in USDT (default: 0.5)
-//!   WITHDRAW_AMOUNT   — Amount recipient withdraws in USDT (default: 0.3)
-//!   RECIPIENT_PUBKEY  — Recipient's shielded public key (hex, 64 chars).
-//!                       If not set, a random recipient key is generated.
+//!   TREE_LEVELS            — Merkle tree depth (default: 20)
+//!   DEPOSIT_A              — First deposit in USDT (default: 0.7)
+//!   DEPOSIT_B              — Second deposit in USDT (default: 0.3)
+//!   TRANSFER_AMOUNT        — Amount to send to recipient in USDT (default: 0.5)
+//!   WITHDRAW_AMOUNT        — Amount recipient withdraws in USDT (default: 0.3)
+//!   RECIPIENT_PUBKEY       — Recipient's spending key (hex, 64 chars). Derives shielded pubkey.
+//!                            If not set, a random recipient key is generated.
+//!   RECIPIENT_VIEWING_PUBKEY — Recipient's viewing public key (hex, 64 chars).
+//!                              If not set, derived from recipient spending key.
 
 use alloy::{
     consensus::Transaction as _,
@@ -33,11 +35,16 @@ use alloy::{
     sol,
 };
 use anyhow::{ ensure, Context, Result };
+use crypto_box::{
+    aead::{ AeadCore, OsRng },
+    PublicKey, SecretKey, SalsaBox,
+};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use shielded_pool_lib::{
     compute_nullifier,
     derive_pubkey,
+    keccak256,
     IncrementalMerkleTree,
     Note,
     TransferPrivateInputs,
@@ -96,6 +103,50 @@ fn decode_hex_32(s: &str) -> Result<[u8; 32]> {
     Ok(arr)
 }
 
+/// Derive a viewing keypair from a spending key.
+/// Matches the TypeScript SDK: viewingSecret = keccak256("viewing" || spending_key)
+fn derive_viewing_keypair(spending_key: &[u8; 32]) -> (SecretKey, PublicKey) {
+    let mut preimage = [0u8; 7 + 32];
+    preimage[..7].copy_from_slice(b"viewing");
+    preimage[7..].copy_from_slice(spending_key);
+    let secret_bytes = keccak256(&preimage);
+    let secret = SecretKey::from(secret_bytes);
+    let public = secret.public_key();
+    (secret, public)
+}
+
+/// Encrypt a note for a recipient's viewing public key.
+/// Format: ephemeral_pubkey(32) || nonce(24) || ciphertext
+/// Compatible with the TypeScript SDK's decryptNote().
+fn encrypt_note(note: &Note, recipient_viewing_pubkey: &PublicKey) -> Vec<u8> {
+    // Serialize note to JSON (same format as TS SDK)
+    let note_json = serde_json::json!({
+        "amount": note.amount.to_string(),
+        "pubkey": format!("0x{}", hex::encode(note.pubkey)),
+        "blinding": format!("0x{}", hex::encode(note.blinding)),
+    });
+    let plaintext = note_json.to_string().into_bytes();
+
+    // Generate ephemeral keypair
+    let ephemeral_secret = SecretKey::generate(&mut OsRng);
+    let ephemeral_public = ephemeral_secret.public_key();
+
+    // Create NaCl box and encrypt
+    let salsa_box = SalsaBox::new(recipient_viewing_pubkey, &ephemeral_secret);
+    let nonce = SalsaBox::generate_nonce(&mut OsRng);
+
+    use crypto_box::aead::Aead;
+    let ciphertext = salsa_box.encrypt(&nonce, &plaintext[..])
+        .expect("encryption should not fail");
+
+    // Pack: ephemeral_pubkey(32) || nonce(24) || ciphertext
+    let mut result = Vec::with_capacity(32 + 24 + ciphertext.len());
+    result.extend_from_slice(ephemeral_public.as_bytes());
+    result.extend_from_slice(&nonce);
+    result.extend_from_slice(&ciphertext);
+    result
+}
+
 // ---------------------------------------------------------------------------
 // Wallet state — saved to disk so the exit script can withdraw
 // ---------------------------------------------------------------------------
@@ -129,8 +180,10 @@ struct WalletSpendingKey {
     label: String,
     /// Hex-encoded 32-byte spending key
     spending_key: String,
-    /// Hex-encoded 32-byte derived pubkey
+    /// Hex-encoded 32-byte derived shielded pubkey
     pubkey: String,
+    /// Hex-encoded 32-byte viewing public key (x25519)
+    viewing_pubkey: String,
 }
 
 fn encode_note(label: &str, note: &Note, leaf_index: u32) -> WalletNote {
@@ -227,20 +280,20 @@ async fn main() -> Result<()> {
     let token = IERC20::new(token_addr, &provider);
     let pool = IShieldedPool::new(pool_addr, &provider);
 
-    // ── Step 2: Generate spending keys ─────────────────────────────────
+    // ── Step 2: Generate spending keys + viewing keys ──────────────────
     let mut rng = rand::thread_rng();
     let spending_key: [u8; 32] = rng.gen();
     let pubkey = derive_pubkey(&spending_key);
+    let (_sender_viewing_secret, sender_viewing_pubkey) = derive_viewing_keypair(&spending_key);
     println!("[2] Sender pubkey:    0x{}", hex::encode(pubkey));
+    println!("    Sender viewing:   0x{}", hex::encode(sender_viewing_pubkey.as_bytes()));
 
     // Recipient: from env or random
     let (recipient_spending_key, recipient_pubkey) = if
         let Ok(pk_hex) = std::env::var("RECIPIENT_PUBKEY")
     {
         let pk = decode_hex_32(&pk_hex)?;
-        // When pubkey is provided, we don't know the spending key.
-        // For the e2e test we need the spending key to build the withdraw proof,
-        // so RECIPIENT_PUBKEY is treated as a spending key and we derive pubkey from it.
+        // RECIPIENT_PUBKEY is treated as a spending key — we derive pubkey from it.
         let pubkey = derive_pubkey(&pk);
         println!("    Recipient key:    0x{} (from env)", hex::encode(pubkey));
         (pk, pubkey)
@@ -251,6 +304,18 @@ async fn main() -> Result<()> {
         (sk, pk)
     };
 
+    // Recipient viewing key: from env or derived from spending key
+    let recipient_viewing_pubkey = if let Ok(vk_hex) = std::env::var("RECIPIENT_VIEWING_PUBKEY") {
+        let vk_bytes = decode_hex_32(&vk_hex)?;
+        let pk = PublicKey::from(vk_bytes);
+        println!("    Recipient view:   0x{} (from env)", hex::encode(pk.as_bytes()));
+        pk
+    } else {
+        let (_secret, pk) = derive_viewing_keypair(&recipient_spending_key);
+        println!("    Recipient view:   0x{} (derived)", hex::encode(pk.as_bytes()));
+        pk
+    };
+
     // ── Wallet state — track all notes for the exit script ────────────
     let mut wallet = WalletState {
         spending_keys: vec![
@@ -258,11 +323,13 @@ async fn main() -> Result<()> {
                 label: "sender".into(),
                 spending_key: hex::encode(spending_key),
                 pubkey: hex::encode(pubkey),
+                viewing_pubkey: hex::encode(sender_viewing_pubkey.as_bytes()),
             },
             WalletSpendingKey {
                 label: "recipient".into(),
                 spending_key: hex::encode(recipient_spending_key),
                 pubkey: hex::encode(recipient_pubkey),
+                viewing_pubkey: hex::encode(recipient_viewing_pubkey.as_bytes()),
             },
         ],
         notes: Vec::new(),
@@ -295,15 +362,17 @@ async fn main() -> Result<()> {
     println!("    Approve tx: {}", receipt.transaction_hash);
 
     println!("    Depositing {} USDT...", (deposit_a as f64) / 1e6);
+    let enc_a = encrypt_note(&note_a, &sender_viewing_pubkey);
     let tx = pool
-        .deposit(FixedBytes::from(comm_a), U256::from(deposit_a), Bytes::new())
+        .deposit(FixedBytes::from(comm_a), U256::from(deposit_a), Bytes::from(enc_a))
         .send().await?;
     let receipt = tx.get_receipt().await?;
     println!("    Deposit A tx: {}", receipt.transaction_hash);
 
     println!("    Depositing {} USDT...", (deposit_b as f64) / 1e6);
+    let enc_b = encrypt_note(&note_b, &sender_viewing_pubkey);
     let tx = pool
-        .deposit(FixedBytes::from(comm_b), U256::from(deposit_b), Bytes::new())
+        .deposit(FixedBytes::from(comm_b), U256::from(deposit_b), Bytes::from(enc_b))
         .send().await?;
     let receipt = tx.get_receipt().await?;
     println!("    Deposit B tx: {}", receipt.transaction_hash);
@@ -472,12 +541,15 @@ async fn main() -> Result<()> {
 
     // ── Step 8: Submit transfer ────────────────────────────────────────
     println!("[8] Submitting private transfer on-chain...");
+    // Encrypt output notes: output_note_0 for recipient, output_note_1 (change) for sender
+    let enc_out0 = encrypt_note(&output_note_0, &recipient_viewing_pubkey);
+    let enc_out1 = encrypt_note(&output_note_1, &sender_viewing_pubkey);
     let tx = pool
         .privateTransfer(
             Bytes::from(transfer_proof_bytes),
             Bytes::from(transfer_public_values),
-            Bytes::new(),
-            Bytes::new()
+            Bytes::from(enc_out0),
+            Bytes::from(enc_out1)
         )
         .send().await?;
     let receipt = tx.get_receipt().await?;
@@ -547,11 +619,17 @@ async fn main() -> Result<()> {
 
     // ── Step 11: Submit withdraw ───────────────────────────────────────
     println!("[11] Submitting withdraw on-chain...");
+    // Encrypt change note for the recipient (who is doing the withdrawal)
+    let enc_change = if let Some(ref cn) = change_note {
+        Bytes::from(encrypt_note(cn, &recipient_viewing_pubkey))
+    } else {
+        Bytes::new()
+    };
     let tx = pool
         .withdraw(
             Bytes::from(withdraw_proof_bytes),
             Bytes::from(withdraw_public_values),
-            Bytes::new()
+            enc_change
         )
         .send().await?;
     let receipt = tx.get_receipt().await?;

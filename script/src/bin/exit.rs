@@ -85,6 +85,8 @@ struct WalletSpendingKey {
     label: String,
     spending_key: String,
     pubkey: String,
+    #[serde(default)]
+    viewing_pubkey: String,
 }
 
 // ---------------------------------------------------------------------------
