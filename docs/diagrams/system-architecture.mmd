@@ -1,0 +1,76 @@
+---
+title: "System Architecture — Plasma Shielded Pool"
+---
+%%
+%% Shows all components, trust boundaries, and data flow.
+%%
+%% Legend:
+%%   Blue   = On-chain (Plasma)
+%%   Green  = Off-chain (user's browser / local machine)
+%%   Orange = Off-chain server (proxy)
+%%   Dashed = Trust boundary
+%%
+
+graph TB
+    subgraph ONCHAIN["ON-CHAIN  (Plasma Network)"]
+        direction TB
+        ERC20["ERC20 (USDT)\ncontracts/interfaces/IERC20.sol"]
+        SP["ShieldedPool\ncontracts/ShieldedPool.sol"]
+        MT["MerkleTree\ncontracts/MerkleTree.sol"]
+        VER["SP1Verifier\ncontracts/interfaces/ISP1Verifier.sol"]
+        SP --- MT
+        SP -->|"verifyProof()"| VER
+        SP -->|"transferFrom / transfer"| ERC20
+    end
+
+    subgraph OFFCHAIN_USER["OFF-CHAIN  (User's Browser / Local Machine)"]
+        direction TB
+        FE["Frontend (React + Vite)\nfrontend/"]
+        SDK["TypeScript SDK\nclient/"]
+        WALLET["ShieldedWallet\nclient/src/wallet.ts"]
+        MERKLE_LOCAL["Local Merkle Tree\nclient/src/merkle.ts"]
+        CRYPTO["Crypto Primitives\nclient/src/crypto.ts"]
+        ENC["NaCl Encryption\nclient/src/encryption.ts"]
+        FE -->|"uses"| SDK
+        SDK --- WALLET
+        SDK --- MERKLE_LOCAL
+        SDK --- CRYPTO
+        SDK --- ENC
+    end
+
+    subgraph OFFCHAIN_SERVER["OFF-CHAIN  (Proxy Server)"]
+        direction TB
+        PROXY["Express Proxy\nproxy/server.ts"]
+    end
+
+    subgraph PROVER["OFF-CHAIN  (Prover)"]
+        direction TB
+        HOST["Rust Host CLI\nscript/src/main.rs"]
+        TRANSFER_PROG["Transfer Circuit (SP1 Guest)\nprograms/transfer/"]
+        WITHDRAW_PROG["Withdraw Circuit (SP1 Guest)\nprograms/withdraw/"]
+        LIB["Shared Types & Crypto\nlib/"]
+        HOST -->|"executes"| TRANSFER_PROG
+        HOST -->|"executes"| WITHDRAW_PROG
+        HOST --- LIB
+        TRANSFER_PROG --- LIB
+        WITHDRAW_PROG --- LIB
+    end
+
+    FE -->|"deposit txn\n(direct chain call)"| SP
+    FE -->|"POST /prove/{transfer,withdraw}\n(circuit input JSON)"| PROXY
+    PROXY -->|"cargo run\n(subprocess)"| HOST
+    HOST -->|"Groth16 proof JSON"| PROXY
+    PROXY -->|"proof + publicValues"| FE
+    FE -->|"privateTransfer / withdraw txn\n(proof + calldata)"| SP
+    SP -->|"EncryptedNote events"| FE
+    FE -->|"scan & decrypt notes"| WALLET
+
+    classDef onchain fill:#d0e0ff,stroke:#336,color:#003
+    classDef offuser fill:#d5f5d5,stroke:#363,color:#030
+    classDef offserver fill:#ffe6cc,stroke:#963,color:#630
+    classDef prover fill:#fff3cd,stroke:#996,color:#630
+
+    class ERC20,SP,MT,VER onchain
+    class FE,SDK,WALLET,MERKLE_LOCAL,CRYPTO,ENC offuser
+    class PROXY offserver
+    class HOST,TRANSFER_PROG,WITHDRAW_PROG,LIB prover

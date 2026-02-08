@@ -1,0 +1,60 @@
+---
+title: "Sequence Diagram — Private Transfer"
+---
+%%
+%% Private Transfer flow: 2-in / 2-out note transfer.
+%% A ZK proof guarantees correctness without revealing amounts, sender, or recipient.
+%%
+%% Legend:
+%%   User / Browser   = frontend/
+%%   SDK              = client/
+%%   Proxy            = proxy/server.ts
+%%   Rust Host        = script/src/main.rs
+%%   SP1 Guest        = programs/transfer/
+%%   ShieldedPool     = contracts/ShieldedPool.sol
+%%
+
+sequenceDiagram
+    actor Sender
+    participant FE as Frontend<br/>frontend/
+    participant SDK as TypeScript SDK<br/>client/
+    participant PROXY as Proxy Server<br/>proxy/server.ts
+    participant HOST as Rust Host<br/>script/
+    participant SP1 as SP1 Transfer Circuit<br/>programs/transfer/
+    participant SP as ShieldedPool<br/>contracts/ShieldedPool.sol
+
+    Sender->>FE: Enter recipient pubkey,<br/>viewing pubkey, amount
+
+    FE->>SDK: privateTransfer(recipientPubkey, amount, viewingPubkey)
+
+    Note over SDK: 1. Select 2 input notes (coin selection)<br/>2. Build Merkle proofs for both inputs<br/>3. Compute nullifiers for both inputs<br/>4. Create 2 output notes:<br/>   • out1: (amount, recipientPubkey, blinding1)<br/>   • out2: (change, senderPubkey, blinding2)<br/>5. Compute output commitments<br/>6. Encrypt each output note with recipient's / sender's viewing key
+
+    SDK->>PROXY: POST /prove/transfer<br/>{root, inputs, outputs, merkleProofs, keys}
+
+    PROXY->>HOST: cargo run -- transfer --input ... --output ...
+
+    Note over HOST: Deserialize circuit input JSON<br/>Build SP1 stdin with witness data
+
+    HOST->>SP1: Execute SP1 guest program
+
+    Note over SP1: ▸ Verify each input note's Merkle proof against root<br/>▸ Verify sender owns inputs (pubkey = keccak256(spending_key))<br/>▸ Compute nullifiers = keccak256(commitment ∥ spending_key)<br/>▸ Verify sum(input amounts) == sum(output amounts)<br/>▸ Compute output commitments<br/>▸ Commit public values: root, 2 nullifiers, 2 commitments
+
+    SP1-->>HOST: Execution trace
+
+    Note over HOST: Generate Groth16 proof<br/>(via Succinct Prover Network)
+
+    HOST-->>PROXY: {proof, public_values, vkey} JSON
+
+    PROXY-->>SDK: {proof, publicValues, vkey}
+
+    SDK->>SP: privateTransfer(proof, publicValues, encOut1, encOut2)
+
+    Note over SP: 1. Check root ∈ known roots (30-root history)<br/>2. Check nullifier1 & nullifier2 not spent<br/>3. VERIFIER.verifyProof(TRANSFER_VKEY, publicValues, proof)<br/>4. Mark nullifiers as spent<br/>5. Insert 2 new commitments into Merkle tree<br/>6. Store encrypted note data
+
+    Note over SP: Emit PrivateTransfer(null1, null2, commit1, commit2, timestamp)<br/>Emit EncryptedNote(commit1, encData1)<br/>Emit EncryptedNote(commit2, encData2)
+
+    SP-->>SDK: Transaction receipt
+    SDK-->>FE: Transfer complete
+    FE-->>Sender: Show confirmation
+
+    Note over FE: Recipient scans EncryptedNote events,<br/>decrypts with viewing key,<br/>discovers incoming note

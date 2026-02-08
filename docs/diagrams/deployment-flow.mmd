@@ -1,0 +1,47 @@
+---
+title: "Deployment Flow"
+---
+%%
+%% Steps to deploy the ShieldedPool contract.
+%%
+%% Legend:
+%%   Rounded boxes = developer actions
+%%   Rectangles    = artifacts / outputs
+%%   Diamonds      = decisions
+%%
+%% References:
+%%   deploy/Deploy.s.sol  — Foundry deployment script
+%%   Makefile              — make deploy-local / make deploy-plasma
+%%   .env.example          — configuration template
+%%
+
+flowchart TD
+    A["1. Configure environment\ncp .env.example .env"] --> B["2. Set required .env vars:\nTOKEN_ADDRESS (USDT)\nVERIFIER_ADDRESS (SP1 verifier)\nPRIVATE_KEY (deployer)"]
+
+    B --> C["3. Build SP1 circuits\nmake build-circuits"]
+    C --> D["4. Generate verification keys\nmake vkeys"]
+
+    D --> E["5. Copy vkeys into .env:\nTRANSFER_VKEY=0x...\nWITHDRAW_VKEY=0x..."]
+
+    E --> F{"Target network?"}
+
+    F -->|"Local"| G["6a. Start Anvil\nmake anvil"]
+    G --> H["7a. Deploy\nmake deploy-local"]
+
+    F -->|"Plasma"| I["6b. Set RPC_URL in .env"]
+    I --> J["7b. Deploy\nmake deploy-plasma"]
+
+    H --> K["8. Foundry runs\ndeploy/Deploy.s.sol"]
+    J --> K
+
+    K --> L["9. ShieldedPool deployed\nConstructor args:\n• TOKEN_ADDRESS\n• VERIFIER_ADDRESS\n• TRANSFER_VKEY\n• WITHDRAW_VKEY\n• TREE_LEVELS (20)"]
+
+    L --> M["10. Save outputs to .env:\nPOOL_ADDRESS=0x...\nDEPLOY_BLOCK=N"]
+
+    M --> N["11. Build client & frontend\nmake build-client\ncd frontend && npm install"]
+
+    N --> O["12. Start proxy & frontend\ncd proxy && npm start\ncd frontend && npm run dev"]
+
+    style A fill:#e8f5e9
+    style M fill:#fff3e0
+    style L fill:#e3f2fd

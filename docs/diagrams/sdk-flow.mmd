@@ -1,0 +1,69 @@
+---
+title: "TypeScript SDK Flow (client/)"
+---
+%%
+%% The TypeScript SDK manages keys, notes, local Merkle tree,
+%% proof requests, and contract interactions.
+%%
+%% References:
+%%   client/src/pool.ts        — ShieldedPoolClient (high-level API)
+%%   client/src/wallet.ts      — ShieldedWallet (key & note management)
+%%   client/src/merkle.ts      — Client-side Merkle tree
+%%   client/src/crypto.ts      — keccak256, commitments, nullifiers, key derivation
+%%   client/src/encryption.ts  — NaCl box encrypt/decrypt
+%%   client/src/prover.ts      — Wraps proof generation (binary or proxy)
+%%   client/src/types.ts       — Shared type definitions
+%%
+
+graph TD
+    subgraph POOL["ShieldedPoolClient — client/src/pool.ts"]
+        DEPOSIT_FN["deposit(amount)\n• Build commitment\n• Approve ERC20\n• Call ShieldedPool.deposit()"]
+        TRANSFER_FN["privateTransfer(recipientPubkey, amount, viewingPubkey)\n• Select 2 input notes\n• Build circuit input\n• Request proof\n• Call ShieldedPool.privateTransfer()"]
+        WITHDRAW_FN["withdraw(recipient, amount)\n• Select input note\n• Build circuit input\n• Request proof\n• Call ShieldedPool.withdraw()"]
+        SYNC_FN["sync()\n• Fetch on-chain events\n• Decrypt EncryptedNote events\n• Update local wallet"]
+    end
+
+    subgraph WALLET_MOD["ShieldedWallet — client/src/wallet.ts"]
+        KEYS["Key Management\n• spendingKey (32 bytes, secret)\n• pubkey = keccak256(spendingKey)\n• viewingKeypair (NaCl box)"]
+        NOTES["Note Tracking\n• List of owned notes\n• Spent/unspent status\n• getBalance()"]
+        COIN["Coin Selection\n• Pick notes for transfer/withdraw\n• Handle change notes"]
+    end
+
+    subgraph MERKLE_MOD["Local Merkle Tree — client/src/merkle.ts"]
+        MIRROR["Mirrors on-chain MerkleTree.sol\n• Same keccak256 hash function\n• Same tree depth & zero values\n• Insert commitments locally"]
+        PROOF_GEN["generateProof(leafIndex)\n• Returns sibling path\n• Used as witness for SP1 circuit"]
+    end
+
+    subgraph CRYPTO_MOD["Crypto — client/src/crypto.ts"]
+        HASH["keccak256 hashing"]
+        COMMIT["computeCommitment(amount, pubkey, blinding)"]
+        NULLIFY["computeNullifier(commitment, spendingKey)"]
+        DERIVE["derivePublicKey(spendingKey)"]
+    end
+
+    subgraph ENC_MOD["Encryption — client/src/encryption.ts"]
+        ENCRYPT["encryptNote(note, recipientViewingPubkey)\n• NaCl box (x25519 + XSalsa20-Poly1305)"]
+        DECRYPT["decryptNote(encryptedData, viewingSecretKey)\n• Returns note if decryption succeeds\n• Returns null if not addressed to us"]
+    end
+
+    subgraph PROVER_MOD["Prover — client/src/prover.ts"]
+        PROVER["requestProof(circuit, input)\n• Calls proxy server or local binary\n• Returns {proof, publicValues, vkey}"]
+    end
+
+    POOL --> WALLET_MOD
+    POOL --> MERKLE_MOD
+    POOL --> PROVER_MOD
+    DEPOSIT_FN --> CRYPTO_MOD
+    DEPOSIT_FN --> ENC_MOD
+    TRANSFER_FN --> CRYPTO_MOD
+    TRANSFER_FN --> ENC_MOD
+    WITHDRAW_FN --> CRYPTO_MOD
+    WITHDRAW_FN --> ENC_MOD
+    SYNC_FN --> ENC_MOD
+
+    style POOL fill:#e3f2fd
+    style WALLET_MOD fill:#e8f5e9
+    style MERKLE_MOD fill:#fff3e0
+    style CRYPTO_MOD fill:#f3e5f5
+    style ENC_MOD fill:#fce4ec
+    style PROVER_MOD fill:#fff8e1

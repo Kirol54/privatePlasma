@@ -1,0 +1,56 @@
+---
+title: "Proxy Flow (proxy/)"
+---
+%%
+%% The proxy server bridges the browser frontend to the Rust SP1 prover.
+%% Browsers cannot spawn subprocesses, so the proxy runs `cargo run` on
+%% behalf of the frontend and returns the proof JSON.
+%%
+%% References:
+%%   proxy/server.ts          — Express server implementation
+%%   script/src/main.rs       — Rust prover binary invoked by proxy
+%%
+%% Required environment variables:
+%%   SP1_PROVER            — "network" (real proofs) or "mock" (testing)
+%%   NETWORK_PRIVATE_KEY   — Succinct Network API key (when SP1_PROVER=network)
+%%   PORT                  — Server port (default: 3001)
+%%   PROJECT_DIR           — Path to repo root (default: parent of proxy/)
+%%
+
+sequenceDiagram
+    actor Browser as Browser<br/>frontend/
+    participant Proxy as Express Proxy<br/>proxy/server.ts<br/>(port 3001)
+    participant FS as Temp Filesystem
+    participant Cargo as Rust Prover<br/>script/src/main.rs
+
+    Note over Browser,Cargo: Why does the proxy exist?<br/>Browsers cannot execute native binaries (cargo run).<br/>The proxy wraps the Rust prover as an HTTP API.
+
+    Browser->>Proxy: GET /health
+    Proxy-->>Browser: { status: "ok", projectDir: "..." }
+
+    Browser->>Proxy: POST /prove/transfer<br/>Body: circuit input JSON
+
+    Note over Proxy: 1. Create temp directory<br/>2. Write input.json to temp dir
+
+    Proxy->>FS: writeFileSync(input.json)
+
+    Proxy->>Cargo: execFile("cargo", ["run", "--release",<br/>"-p", "shielded-pool-script", "--",<br/>"transfer", "--input", inputPath,<br/>"--output", outputPath])<br/>cwd: PROJECT_DIR<br/>timeout: 10 minutes
+
+    Note over Cargo: Execute SP1 circuit<br/>Generate Groth16 proof<br/>Write output.json
+
+    Cargo-->>Proxy: Process exits (stdout/stderr)
+
+    Proxy->>FS: readFileSync(output.json)
+
+    Note over Proxy: 3. Parse output JSON<br/>4. Ensure 0x-prefix on hex strings<br/>5. Clean up temp directory
+
+    Proxy->>FS: rmSync(tempDir)
+
+    Proxy-->>Browser: { proof: "0x...",<br/>publicValues: "0x...",<br/>vkey: "0x..." }
+
+    Note over Browser: SDK uses proof + publicValues<br/>to call ShieldedPool contract
+
+    Browser->>Proxy: POST /prove/withdraw<br/>(same flow as transfer)
+    Proxy->>Cargo: cargo run ... withdraw ...
+    Cargo-->>Proxy: output.json
+    Proxy-->>Browser: { proof, publicValues, vkey }

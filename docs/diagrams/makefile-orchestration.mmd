@@ -1,0 +1,76 @@
+---
+title: "Makefile Orchestration Map"
+---
+%%
+%% All Makefile targets and their dependencies.
+%%
+%% Reference: Makefile (project root)
+%%
+%% Legend:
+%%   Blue   = Build targets
+%%   Green  = Test targets
+%%   Orange = Deploy targets
+%%   Purple = Proof targets
+%%   Red    = E2E targets
+%%   Gray   = Utility targets
+%%
+
+graph TD
+    subgraph BUILD["Build Targets"]
+        BA["make build-all"]
+        BC["make build-circuits\ncd programs/transfer && cargo prove build\ncd programs/withdraw && cargo prove build"]
+        BH["make build-host\ncargo build --release\n-p shielded-pool-script"]
+        BCO["make build-contracts\nforge build"]
+        BCL["make build-client\ncd client && npm install && npm run build"]
+        BA --> BC
+        BA --> BH
+        BA --> BCO
+        BA --> BCL
+    end
+
+    subgraph TEST["Test Targets"]
+        TA["make test-all"]
+        TC["make test-contracts\nforge test -v"]
+        TL["make test-lib\ncargo test -p shielded-pool-lib"]
+        TI["make test-integration\ncargo test -p shielded-pool-tests\n(generates fixtures/*.json)"]
+        TA --> TC
+        TA --> TL
+        TA --> TI
+    end
+
+    subgraph DEPLOY["Deploy Targets"]
+        ANVIL["make anvil\nStart local Anvil node"]
+        DL["make deploy-local\nforge script deploy/Deploy.s.sol\n--rpc-url localhost:8545"]
+        DP["make deploy-plasma\nforge script deploy/Deploy.s.sol\n--rpc-url $RPC_URL"]
+        ANVIL -.->|"requires running"| DL
+    end
+
+    subgraph PROOF["Proof Targets"]
+        VK["make vkeys\nPrint SP1 verification keys\n(SP1_PROVER=mock)"]
+        ET["make execute-transfer\nExecute circuit, no proof\n(SP1_PROVER=mock, fast)"]
+        EW["make execute-withdraw\nExecute circuit, no proof\n(SP1_PROVER=mock, fast)"]
+        PT["make prove-transfer\nGenerate real Groth16 proof\n(SP1_PROVER=network)\nRequires: NETWORK_PRIVATE_KEY"]
+        PW["make prove-withdraw\nGenerate real Groth16 proof\n(SP1_PROVER=network)\nRequires: NETWORK_PRIVATE_KEY"]
+    end
+
+    subgraph E2E["E2E Targets"]
+        E2E_T["make e2e\nFull lifecycle test:\ndeposit → transfer → withdraw\nRequires: POOL_ADDRESS,\nNETWORK_PRIVATE_KEY"]
+        EXIT_T["make exit\nBatch withdraw all unspent notes\nRequires: fixtures/wallet.json"]
+    end
+
+    HELP["make help\nShow all targets"]
+
+    %% Cross-group dependencies
+    TI -.->|"generates"| FIXTURES["fixtures/\ntest_transfer_input.json\ntest_withdraw_input.json"]
+    FIXTURES -.->|"used by"| ET
+    FIXTURES -.->|"used by"| EW
+    VK -.->|"output needed for"| DL
+    VK -.->|"output needed for"| DP
+    BC -.->|"circuits needed by"| BH
+    BC -.->|"circuits needed by"| VK
+
+    style BUILD fill:#e3f2fd
+    style TEST fill:#e8f5e9
+    style DEPLOY fill:#fff3e0
+    style PROOF fill:#f3e5f5
+    style E2E fill:#fce4ec

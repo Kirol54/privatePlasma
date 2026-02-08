@@ -1,0 +1,85 @@
+---
+title: "Frontend Flow (frontend/)"
+---
+%%
+%% User journey through the React frontend.
+%%
+%% References:
+%%   frontend/src/App.tsx                        — Main app shell
+%%   frontend/src/components/ConnectWallet.tsx    — MetaMask connection
+%%   frontend/src/components/Dashboard.tsx        — Balance, keys, notes
+%%   frontend/src/components/DepositForm.tsx      — Deposit UI
+%%   frontend/src/components/TransferForm.tsx     — Transfer UI
+%%   frontend/src/components/WithdrawForm.tsx     — Withdraw UI
+%%   frontend/src/components/NotesList.tsx        — Note listing
+%%   frontend/src/components/TxStatus.tsx         — Transaction status
+%%   frontend/src/context/WalletContext.tsx       — Ethereum wallet state
+%%   frontend/src/context/ShieldedContext.tsx     — Shielded wallet + pool state
+%%
+
+flowchart TD
+    START(["User opens app"]) --> CONNECT
+
+    subgraph CONNECT["1. Connect Wallet"]
+        CW["ConnectWallet.tsx\n• MetaMask connection\n• Get Ethereum signer"]
+        WC["WalletContext.tsx\n• Store provider & signer\n• Track connected address"]
+        CW --> WC
+    end
+
+    CONNECT --> INIT
+
+    subgraph INIT["2. Initialize Shielded Wallet"]
+        SC["ShieldedContext.tsx\n• Create or import ShieldedWallet\n• Initialize ShieldedPoolClient\n• Display shielded pubkey & viewing pubkey"]
+        IMPORT["Import wallet from:\n• JSON file (exported backup)\n• Raw spending key"]
+        EXPORT["Export wallet to JSON file\nfor backup"]
+        SC --- IMPORT
+        SC --- EXPORT
+    end
+
+    INIT --> DASHBOARD
+
+    subgraph DASHBOARD["3. Dashboard"]
+        DASH["Dashboard.tsx\n• Show shielded balance\n• Show shielded pubkey (click to copy)\n• Show viewing pubkey (click to copy)\n• List owned notes"]
+        NL["NotesList.tsx\n• Display unspent notes\n• Show amount & status"]
+        DASH --- NL
+    end
+
+    DASHBOARD --> ACTIONS
+
+    subgraph ACTIONS["4. User Actions"]
+        direction TB
+
+        DEP["DepositForm.tsx\n• Enter amount\n• Direct chain call:\n  approve() → deposit()"]
+
+        XFER["TransferForm.tsx\n• Enter recipient pubkey\n• Enter viewing pubkey\n• Enter amount\n• Proxy call → proof generation\n• Chain call: privateTransfer()"]
+
+        WD["WithdrawForm.tsx\n• Enter recipient address\n• Enter amount\n• Proxy call → proof generation\n• Chain call: withdraw()"]
+    end
+
+    DEP -->|"direct chain call\n(no proxy needed)"| CHAIN["ShieldedPool\ncontracts/"]
+    XFER -->|"POST /prove/transfer"| PROXY["Proxy Server\nproxy/server.ts"]
+    WD -->|"POST /prove/withdraw"| PROXY
+    PROXY -->|"proof JSON"| XFER
+    PROXY -->|"proof JSON"| WD
+    XFER -->|"proof + calldata"| CHAIN
+    WD -->|"proof + calldata"| CHAIN
+
+    ACTIONS --> SYNC
+
+    subgraph SYNC["5. Sync & Scan"]
+        SYNC_BTN["Sync Tree button\n• Fetch Deposit & EncryptedNote events\n• Insert commitments into local Merkle tree\n• Decrypt notes with viewing key\n• Update wallet balance"]
+    end
+
+    SYNC --> DASHBOARD
+
+    CHAIN -->|"events"| SYNC
+
+    DEP -.->|"TxStatus.tsx\nshows pending/confirmed"| DASHBOARD
+    XFER -.->|"TxStatus.tsx"| DASHBOARD
+    WD -.->|"TxStatus.tsx"| DASHBOARD
+
+    style CONNECT fill:#e3f2fd
+    style INIT fill:#e8f5e9
+    style DASHBOARD fill:#fff3e0
+    style ACTIONS fill:#f3e5f5
+    style SYNC fill:#fce4ec

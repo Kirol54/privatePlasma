@@ -1,0 +1,53 @@
+---
+title: "Sequence Diagram — Deposit"
+---
+%%
+%% Deposit flow: user converts public USDT into a shielded note.
+%% No ZK proof required — this is a public operation.
+%%
+%% Legend:
+%%   User / Browser      = frontend/
+%%   SDK                 = client/
+%%   ShieldedPool        = contracts/ShieldedPool.sol
+%%   ERC20               = USDT token contract
+%%   MerkleTree          = contracts/MerkleTree.sol (inherited by ShieldedPool)
+%%
+
+sequenceDiagram
+    actor User
+    participant FE as Frontend<br/>frontend/
+    participant SDK as TypeScript SDK<br/>client/
+    participant ERC20 as ERC20 (USDT)
+    participant SP as ShieldedPool<br/>contracts/ShieldedPool.sol
+    participant MT as MerkleTree<br/>contracts/MerkleTree.sol
+
+    User->>FE: Enter deposit amount
+    FE->>SDK: deposit(amount)
+
+    Note over SDK: Generate random blinding (32 bytes)<br/>Compute commitment = keccak256(amount ∥ pubkey ∥ blinding)<br/>Encrypt note data with depositor's viewing key (NaCl box)
+
+    SDK->>ERC20: approve(poolAddress, amount)
+    ERC20-->>SDK: Approval confirmed
+
+    SDK->>SP: deposit(commitment, amount, encryptedData)
+
+    Note over SP: Verify amount > 0
+
+    SP->>ERC20: transferFrom(user, pool, amount)
+    ERC20-->>SP: Tokens transferred
+
+    SP->>MT: _insert(commitment)
+
+    Note over MT: Insert commitment as next leaf<br/>Recompute Merkle root<br/>Store root in 30-root history ring buffer
+
+    MT-->>SP: leafIndex
+
+    SP->>SP: Store encryptedNotes[leafIndex]
+
+    Note over SP: Emit Deposit(commitment, amount, leafIndex, timestamp)<br/>Emit EncryptedNote(commitment, encryptedData)
+
+    SP-->>SDK: Transaction receipt (leafIndex in events)
+    SDK-->>FE: Deposit complete
+    FE-->>User: Show confirmation + new note
+
+    Note over SDK: Save note locally:<br/>{amount, pubkey, blinding, commitment, leafIndex}

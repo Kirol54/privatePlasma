@@ -1,0 +1,69 @@
+---
+title: "Rust Host / Proof Generation Flow (script/)"
+---
+%%
+%% How the Rust host CLI generates ZK proofs.
+%%
+%% References:
+%%   script/src/main.rs       — CLI entry point
+%%   programs/transfer/       — SP1 guest (transfer circuit)
+%%   programs/withdraw/       — SP1 guest (withdraw circuit)
+%%   lib/                     — Shared types & crypto primitives
+%%   fixtures/                — Test input/output JSON files
+%%   script/src/bin/e2e.rs    — End-to-end test binary
+%%   script/src/bin/exit.rs   — Batch withdrawal binary
+%%
+
+flowchart TD
+    subgraph CLI["CLI Entry Point — script/src/main.rs"]
+        PARSE["Parse CLI args (clap)\n• transfer | withdraw | vkeys\n• --input <path>\n• --output <path>\n• --execute-only (optional)"]
+    end
+
+    subgraph VKEYS_CMD["Subcommand: vkeys"]
+        VKEYS["Print SP1 verification keys\nfor transfer & withdraw circuits"]
+    end
+
+    subgraph PROVE_CMD["Subcommand: transfer | withdraw"]
+        READ["Read circuit input JSON\nfrom --input path"]
+        STDIN["Build SP1 stdin\nSerialize witness data\n(notes, keys, Merkle proofs, etc.)"]
+        EXEC_CHECK{"--execute-only?"}
+        EXEC_ONLY["Execute SP1 guest\n(mock prover, no real proof)\nUsed for fast local testing"]
+        PROVE["Generate Groth16 proof\nvia Succinct Prover Network\n(SP1_PROVER=network)"]
+        WRITE["Write output JSON:\n{proof, public_values, vkey}\nto --output path"]
+    end
+
+    subgraph GUEST["SP1 Guest Program"]
+        TRANSFER_G["programs/transfer/src/main.rs\n2-in-2-out transfer circuit"]
+        WITHDRAW_G["programs/withdraw/src/main.rs\nWithdrawal circuit"]
+    end
+
+    subgraph SHARED["Shared Library — lib/"]
+        LIB["Types: TransferInput, WithdrawInput\nCrypto: keccak256, commitments\nMerkle: proof verification"]
+    end
+
+    subgraph BINS["Additional Binaries"]
+        E2E["script/src/bin/e2e.rs\nFull lifecycle test:\ndeposit → transfer → withdraw"]
+        EXIT["script/src/bin/exit.rs\nBatch withdrawal of all\nunspent notes from fixtures/wallet.json"]
+    end
+
+    PARSE -->|"vkeys"| VKEYS
+    PARSE -->|"transfer / withdraw"| READ
+    READ --> STDIN
+    STDIN --> EXEC_CHECK
+    EXEC_CHECK -->|"yes"| EXEC_ONLY
+    EXEC_CHECK -->|"no"| PROVE
+    EXEC_ONLY --> WRITE
+    PROVE --> WRITE
+
+    STDIN -->|"transfer"| TRANSFER_G
+    STDIN -->|"withdraw"| WITHDRAW_G
+    TRANSFER_G --- LIB
+    WITHDRAW_G --- LIB
+
+    E2E -->|"uses"| PROVE
+    EXIT -->|"uses"| PROVE
+
+    style CLI fill:#e3f2fd
+    style GUEST fill:#fff3e0
+    style SHARED fill:#f3e5f5
+    style BINS fill:#e8f5e9

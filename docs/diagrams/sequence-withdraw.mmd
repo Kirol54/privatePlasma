@@ -1,0 +1,62 @@
+---
+title: "Sequence Diagram — Withdraw"
+---
+%%
+%% Withdraw flow: convert a shielded note back to public USDT.
+%% The ZK proof commits to the recipient address inside the proof
+%% (prevents front-running).  Partial withdrawals produce a change note.
+%%
+%% Legend:
+%%   User / Browser   = frontend/
+%%   SDK              = client/
+%%   Proxy            = proxy/server.ts
+%%   Rust Host        = script/src/main.rs
+%%   SP1 Guest        = programs/withdraw/
+%%   ShieldedPool     = contracts/ShieldedPool.sol
+%%   ERC20            = USDT token contract
+%%
+
+sequenceDiagram
+    actor User
+    participant FE as Frontend<br/>frontend/
+    participant SDK as TypeScript SDK<br/>client/
+    participant PROXY as Proxy Server<br/>proxy/server.ts
+    participant HOST as Rust Host<br/>script/
+    participant SP1 as SP1 Withdraw Circuit<br/>programs/withdraw/
+    participant SP as ShieldedPool<br/>contracts/ShieldedPool.sol
+    participant ERC20 as ERC20 (USDT)
+
+    User->>FE: Enter recipient address, amount
+
+    FE->>SDK: withdraw(recipientAddress, amount)
+
+    Note over SDK: 1. Select 1 input note with sufficient balance<br/>2. Build Merkle proof for input<br/>3. Compute nullifier<br/>4. If partial withdrawal, create change note:<br/>   change = noteAmount − withdrawAmount<br/>5. Encrypt change note with sender's viewing key
+
+    SDK->>PROXY: POST /prove/withdraw<br/>{root, input, merkleProof, recipient, amount, change}
+
+    PROXY->>HOST: cargo run -- withdraw --input ... --output ...
+
+    HOST->>SP1: Execute SP1 guest program
+
+    Note over SP1: ▸ Verify input note's Merkle proof against root<br/>▸ Verify sender owns input (pubkey = keccak256(spending_key))<br/>▸ Compute nullifier = keccak256(commitment ∥ spending_key)<br/>▸ Verify withdrawAmount + changeAmount == noteAmount<br/>▸ Commit recipient address inside proof (anti-front-running)<br/>▸ Compute change commitment (or bytes32(0) if full withdrawal)<br/>▸ Commit public values: root, nullifier, recipient, amount, changeCommitment
+
+    SP1-->>HOST: Execution trace
+
+    Note over HOST: Generate Groth16 proof<br/>(via Succinct Prover Network)
+
+    HOST-->>PROXY: {proof, public_values, vkey} JSON
+
+    PROXY-->>SDK: {proof, publicValues, vkey}
+
+    SDK->>SP: withdraw(proof, publicValues, encryptedChange)
+
+    Note over SP: 1. Check root ∈ known roots<br/>2. Check nullifier not spent<br/>3. Check recipient ≠ address(0)<br/>4. VERIFIER.verifyProof(WITHDRAW_VKEY, publicValues, proof)<br/>5. Mark nullifier as spent<br/>6. If changeCommitment ≠ 0: insert into Merkle tree, store encrypted data
+
+    SP->>ERC20: transfer(recipient, amount)
+    ERC20-->>SP: Tokens sent
+
+    Note over SP: Emit Withdrawal(nullifier, recipient, amount, timestamp)<br/>Emit EncryptedNote(changeCommitment, encryptedChange) [if change]
+
+    SP-->>SDK: Transaction receipt
+    SDK-->>FE: Withdrawal complete
+    FE-->>User: Show confirmation + updated balance

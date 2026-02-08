@@ -294,6 +294,14 @@ See **[E2E Test Guide](docs/e2e-test.md)** for the full step-by-step breakdown, 
 - **[Frontend Integration Guide](docs/frontend-integration.md)** — How to build a user-facing app on top of the SDK. Covers wallet connection, viewing keys, note encryption/scanning, deposit/transfer/withdraw UI flows, wallet import/export, and a minimal React example.
 - **[How It Works (Non-Technical)](docs/how-it-works.md)** — Plain-language explanation for non-developers. What the project does, why privacy matters, how the sealed-envelope analogy works, use cases, and FAQ.
 
+## Diagrams
+
+Visual flow diagrams for the full system and each component live in **[`docs/diagrams/`](docs/diagrams/)**. They use Mermaid (`.mmd`) so GitHub renders them natively.
+
+**System-level:** [System Architecture](docs/diagrams/system-architecture.mmd) · [Deposit Sequence](docs/diagrams/sequence-deposit.mmd) · [Private Transfer Sequence](docs/diagrams/sequence-transfer.mmd) · [Withdraw Sequence](docs/diagrams/sequence-withdraw.mmd) · [Data & Artifacts](docs/diagrams/data-artifacts.mmd)
+
+**Per-component:** [Deployment Flow](docs/diagrams/deployment-flow.mmd) · [Proof Generation](docs/diagrams/proof-generation-flow.mmd) · [Proxy Flow](docs/diagrams/proxy-flow.mmd) · [SDK Flow](docs/diagrams/sdk-flow.mmd) · [Frontend Flow](docs/diagrams/frontend-flow.mmd) · [Makefile Orchestration](docs/diagrams/makefile-orchestration.mmd)
+
 ## License
 
 MIT

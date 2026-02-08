@@ -1,0 +1,75 @@
+---
+title: "Data & Artifact Diagram — Commitments, Nullifiers, Proofs, Encrypted Notes"
+---
+%%
+%% Shows where each cryptographic artifact is created, stored, and verified.
+%%
+%% Legend:
+%%   🟢 Created    — where the artifact is first produced
+%%   🔵 Stored     — where it persists
+%%   🔴 Verified   — where it is checked / consumed
+%%   (private)     — never revealed on-chain
+%%   (public)      — visible on-chain
+%%
+
+graph LR
+    subgraph NOTE["Note (private)"]
+        direction TB
+        N_DEF["amount + pubkey + blinding"]
+        N_CREATED["🟢 Created: client/src/wallet.ts"]
+        N_STORED["🔵 Stored: user's local wallet (off-chain)"]
+    end
+
+    subgraph COMMITMENT["Commitment (public)"]
+        direction TB
+        C_DEF["keccak256(amount ∥ pubkey ∥ blinding)"]
+        C_CREATED["🟢 Created: client/src/crypto.ts"]
+        C_STORED["🔵 Stored: on-chain Merkle tree\ncontracts/MerkleTree.sol"]
+        C_VERIFIED["🔴 Verified: inside SP1 circuit\nprograms/transfer/ & programs/withdraw/"]
+    end
+
+    subgraph NULLIFIER["Nullifier (public)"]
+        direction TB
+        NUL_DEF["keccak256(commitment ∥ spending_key)"]
+        NUL_CREATED["🟢 Created: client/src/crypto.ts\n& inside SP1 circuit"]
+        NUL_STORED["🔵 Stored: on-chain mapping\nShieldedPool.nullifiers"]
+        NUL_VERIFIED["🔴 Verified: ShieldedPool checks\nnot already spent"]
+    end
+
+    subgraph MERKLE_PROOF["Merkle Proof (private)"]
+        direction TB
+        MP_DEF["Sibling hashes from leaf to root"]
+        MP_CREATED["🟢 Created: client/src/merkle.ts\n(mirrors on-chain tree)"]
+        MP_VERIFIED["🔴 Verified: inside SP1 circuit\n(recomputes root from proof)"]
+    end
+
+    subgraph ZK_PROOF["ZK Proof (public)"]
+        direction TB
+        ZKP_DEF["Groth16 proof (~260 bytes)"]
+        ZKP_CREATED["🟢 Created: script/src/main.rs\n(via SP1 prover / Succinct Network)"]
+        ZKP_VERIFIED["🔴 Verified: on-chain\nISP1Verifier.verifyProof()"]
+    end
+
+    subgraph ENCRYPTED["Encrypted Note (public)"]
+        direction TB
+        ENC_DEF["NaCl box: amount + pubkey + blinding"]
+        ENC_CREATED["🟢 Created: client/src/encryption.ts\n(x25519 + XSalsa20-Poly1305)"]
+        ENC_STORED["🔵 Stored: on-chain\nShieldedPool.encryptedNotes mapping\n+ emitted as EncryptedNote event"]
+        ENC_DECRYPTED["🔓 Decrypted: client/src/encryption.ts\n(by recipient's viewing key)"]
+    end
+
+    subgraph ROOT["Merkle Root (public)"]
+        direction TB
+        R_DEF["keccak256-based tree root"]
+        R_STORED["🔵 Stored: on-chain 30-root ring buffer\ncontracts/MerkleTree.sol"]
+        R_VERIFIED["🔴 Verified: ShieldedPool.isKnownRoot()\n& inside SP1 circuit"]
+    end
+
+    NOTE -->|"hashed into"| COMMITMENT
+    NOTE -->|"encrypted as"| ENCRYPTED
+    COMMITMENT -->|"inserted into tree → updates"| ROOT
+    COMMITMENT -->|"combined with spending_key →"| NULLIFIER
+    COMMITMENT -->|"path to root ="| MERKLE_PROOF
+    MERKLE_PROOF -->|"proven inside"| ZK_PROOF
+    NULLIFIER -->|"committed inside"| ZK_PROOF
+    ZK_PROOF -->|"submitted to"| COMMITMENT
