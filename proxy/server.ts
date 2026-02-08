@@ -12,8 +12,9 @@
 
 import express from 'express';
 import cors from 'cors';
+import https from 'https';
 import { execFile } from 'child_process';
-import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'fs';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { promisify } from 'util';
@@ -96,8 +97,31 @@ app.post('/prove/withdraw', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\nShielded Pool Proxy running on http://localhost:${PORT}`);
-  console.log(`Project dir: ${PROJECT_DIR}`);
-  console.log(`SP1_PROVER: ${process.env.SP1_PROVER || 'not set'}\n`);
-});
+// Try HTTPS (needed when frontend is served from a remote HTTPS origin like Netlify)
+const certPath = join(import.meta.dirname, 'localhost+2.pem');
+const keyPath = join(import.meta.dirname, 'localhost+2-key.pem');
+
+if (existsSync(certPath) && existsSync(keyPath)) {
+  const httpsPort = Number(process.env.HTTPS_PORT || 3443);
+  https.createServer({
+    cert: readFileSync(certPath),
+    key: readFileSync(keyPath),
+  }, app).listen(httpsPort, () => {
+    console.log(`\nShielded Pool Proxy running on:`);
+    console.log(`  HTTP  → http://localhost:${PORT}`);
+    console.log(`  HTTPS → https://localhost:${httpsPort}`);
+    console.log(`Project dir: ${PROJECT_DIR}`);
+    console.log(`SP1_PROVER: ${process.env.SP1_PROVER || 'not set'}\n`);
+  });
+
+  // Also keep HTTP for local dev
+  app.listen(PORT);
+} else {
+  app.listen(PORT, () => {
+    console.log(`\nShielded Pool Proxy running on http://localhost:${PORT}`);
+    console.log(`Project dir: ${PROJECT_DIR}`);
+    console.log(`SP1_PROVER: ${process.env.SP1_PROVER || 'not set'}`);
+    console.log(`\nTip: To use with HTTPS frontends (e.g. Netlify), run:`);
+    console.log(`  brew install mkcert && mkcert -install && cd proxy && mkcert localhost 127.0.0.1 ::1\n`);
+  });
+}

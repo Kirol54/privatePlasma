@@ -14,6 +14,7 @@ node_modules/
 client/dist/
 
 frontend/dist/
+proxy/*.pem
 
 # TypeScript build info
 *.tsbuildinfo
