@@ -20,42 +20,6 @@ function FlowArrow({ label }: { label?: string }) {
   );
 }
 
-/* ── use case card ──────────────────────────────────────────────────── */
-
-function UseCaseCard({
-  icon,
-  title,
-  bullets,
-  flow,
-}: {
-  icon: string;
-  title: string;
-  bullets: string[];
-  flow: { from: string; to: string; hidden: string };
-}) {
-  return (
-    <div className="use-case-card">
-      <div className="use-case-header">
-        <span className="use-case-icon">{icon}</span>
-        <h3>{title}</h3>
-      </div>
-      <ul className="use-case-bullets">
-        {bullets.map((b, i) => (
-          <li key={i}>{b}</li>
-        ))}
-      </ul>
-      <div className="use-case-flow">
-        <span className="uc-flow-label">From</span>
-        <span className="uc-flow-value">{flow.from}</span>
-        <span className="uc-flow-arrow">→</span>
-        <span className="uc-flow-label">To</span>
-        <span className="uc-flow-value">{flow.to}</span>
-        <span className="uc-flow-hidden">🔒 Hidden: {flow.hidden}</span>
-      </div>
-    </div>
-  );
-}
-
 /* ── collapsible section ────────────────────────────────────────────── */
 
 function Collapsible({ label, children, defaultOpen }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
@@ -111,8 +75,6 @@ function DetailedStep({ num, action, component, location, detail }: {
 /* ── main landing page ──────────────────────────────────────────────── */
 
 export function LandingPage({ onLaunchApp }: LandingPageProps) {
-  const [showTech, setShowTech] = useState(false);
-
   return (
     <div className="landing">
       <div className="landing-bg" />
@@ -202,75 +164,19 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
           </div>
         </div>
       </section>
-      {/* ─── USE CASES ───────────────────────────────────────────────── */}
-      <section className="section" id="use-cases">
-        <h2 className="section-title">Enterprise Payment Use Cases</h2>
-        <p className="section-lead">
-          Real-world scenarios where payment confidentiality matters.
-        </p>
-
-        <div className="use-cases-grid">
-          <UseCaseCard
-            icon="📄"
-            title="B2B Invoice Settlements"
-            bullets={[
-              'Companies settle invoices in USDT on-chain',
-              'Pricing, volume, and counterparties stay confidential',
-              'Competitors cannot scrape payment data',
-              'Settlements are final, provable, and auditable',
-            ]}
-            flow={{ from: 'Company A', to: 'Company B', hidden: 'amount, pricing, relationship' }}
-          />
-          <UseCaseCard
-            icon="💼"
-            title="Confidential Payroll & Contractor Payments"
-            bullets={[
-              'Pay salaries or contractors privately in USDT',
-              'No public salary leaks or org-chart inference',
-              'Employees can withdraw publicly or stay shielded',
-              'Viewing keys enable auditing when required',
-            ]}
-            flow={{ from: 'Employer', to: 'Employees', hidden: 'salary amounts, org structure' }}
-          />
-          <UseCaseCard
-            icon="🏛️"
-            title="Treasury & Internal Fund Movements"
-            bullets={[
-              'Move USDT between internal wallets privately',
-              'Prevents balance tracking and strategy inference',
-              'Rebalancing, runway management, ops funds',
-              'Full on-chain settlement with confidentiality',
-            ]}
-            flow={{ from: 'Treasury', to: 'Ops Wallet', hidden: 'balances, fund movements' }}
-          />
-          <UseCaseCard
-            icon="🤝"
-            title="Partner & Revenue-Share Payouts"
-            bullets={[
-              'Pay partners without revealing revenue splits',
-              'Partner performance stays confidential',
-              'Clean on-chain settlement',
-              'Protect confidential business relationships',
-            ]}
-            flow={{ from: 'Platform', to: 'Partners', hidden: 'revenue splits, performance data' }}
-          />
-        </div>
-      </section>
       {/* ─── PAYMENT LIFECYCLE ───────────────────────────────────────── */}
       <section className="section" id="lifecycle">
-        <h2 className="section-title">Payment Lifecycle</h2>
+        <h2 className="section-title">How It Works</h2>
         <p className="section-lead">
           Three simple steps — deposit, transfer, withdraw.
         </p>
 
         <div className="lifecycle">
-          {/* Step 1 */}
           <div className="lc-step">
             <div className="lc-num">1</div>
             <div className="lc-body">
               <h4>Deposit</h4>
-              <p>User sends USDT from their <strong>public wallet</strong> into the shielded pool.
-                A cryptographic note commitment is stored on-chain.</p>
+              <p>Send USDT from your wallet into the shielded pool. A cryptographic commitment is stored on-chain.</p>
               <div className="lc-tags">
                 <span className="tag tag--public">Public</span>
                 <span className="tag tag--info">No ZK proof needed</span>
@@ -280,13 +186,11 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
 
           <div className="lc-connector" />
 
-          {/* Step 2 */}
           <div className="lc-step">
             <div className="lc-num">2</div>
             <div className="lc-body">
               <h4>Private Transfer</h4>
-              <p>Funds move inside the shielded pool. A ZK proof ensures correctness — amount
-                conservation, ownership, and double-spend prevention — without revealing anything.</p>
+              <p>Move funds inside the pool. A ZK proof ensures correctness without revealing sender, recipient, or amount.</p>
               <div className="lc-tags">
                 <span className="tag tag--hidden">Amount hidden</span>
                 <span className="tag tag--hidden">Parties hidden</span>
@@ -297,13 +201,11 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
 
           <div className="lc-connector" />
 
-          {/* Step 3 */}
           <div className="lc-step">
             <div className="lc-num">3</div>
             <div className="lc-body">
               <h4>Withdraw</h4>
-              <p>Recipient withdraws from the shielded pool to any <strong>public wallet</strong>. A ZK proof
-                ensures the withdrawal amount matches what was received.</p>
+              <p>Convert shielded notes back to USDT, sent to any public address.</p>
               <div className="lc-tags">
                 <span className="tag tag--public">Public</span>
                 <span className="tag tag--zk">Proven via ZK</span>
@@ -313,247 +215,61 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── PRIVATE TRANSFER MECHANICS ──────────────────────────────── */}
-      <section className="section" id="mechanics">
-        <h2 className="section-title">How Private Transfers Work</h2>
-        <p className="section-lead">
-          No cryptographic math required — here is the high-level flow.
-        </p>
-
-        <div className="mechanics-flow">
-          <div className="mech-col">
-            <h4>Inputs</h4>
-            <div className="mech-box mech-box--hidden">Note A<br /><small>owned by sender</small></div>
-            <div className="mech-box mech-box--hidden">Note B<br /><small>owned by sender</small></div>
+      {/* ─── USE CASES (compact) ──────────────────────────────────────── */}
+      <section className="section" id="use-cases">
+        <h2 className="section-title">Use Cases</h2>
+        <div className="use-cases-compact">
+          <div className="uc-compact-card">
+            <span className="uc-compact-icon">📄</span>
+            <div>
+              <h4>B2B Invoices</h4>
+              <p>Settle invoices on-chain without exposing pricing or client relationships.</p>
+            </div>
           </div>
-          <div className="mech-arrow">
-            <div className="mech-arrow-line" />
-            <div className="mech-proof-label">ZK Proof</div>
-            <ul className="mech-checklist">
-              <li>✓ Notes exist in Merkle tree</li>
-              <li>✓ Sender owns inputs</li>
-              <li>✓ Total value conserved</li>
-              <li>✓ Nullifiers prevent double-spend</li>
-            </ul>
+          <div className="uc-compact-card">
+            <span className="uc-compact-icon">💼</span>
+            <div>
+              <h4>Payroll</h4>
+              <p>Pay salaries privately. No public salary leaks or org-chart inference.</p>
+            </div>
           </div>
-          <div className="mech-col">
-            <h4>Outputs</h4>
-            <div className="mech-box mech-box--hidden">Note C<br /><small>for recipient</small></div>
-            <div className="mech-box mech-box--hidden">Note D<br /><small>change back to sender</small></div>
+          <div className="uc-compact-card">
+            <span className="uc-compact-icon">🏛️</span>
+            <div>
+              <h4>Treasury Ops</h4>
+              <p>Move funds between internal wallets without revealing runway or strategy.</p>
+            </div>
+          </div>
+          <div className="uc-compact-card">
+            <span className="uc-compact-icon">🤝</span>
+            <div>
+              <h4>Revenue Sharing</h4>
+              <p>Pay partners without exposing revenue splits or performance data.</p>
+            </div>
           </div>
         </div>
-
-        <div className="mech-delivery">
-          <span>📩</span> Encrypted notes are delivered to recipients — only the intended
-          party can decrypt and spend them.
-        </div>
-
-        {/* Technical details toggle */}
-        <button
-          className="toggle-tech"
-          onClick={() => setShowTech(!showTech)}
-        >
-          {showTech ? '▾ Hide' : '▸ Show'} technical components
-        </button>
-
-        {showTech && (
-          <div className="tech-grid">
-            <div className="tech-card">
-              <h5>Smart Contract</h5>
-              <p>On-chain state: Merkle tree of commitments, nullifier set, USDT escrow. Verifies SP1 proofs.</p>
-            </div>
-            <div className="tech-card">
-              <h5>Prover</h5>
-              <p>Generates SP1 zero-knowledge proofs for transfers and withdrawals client-side or via proxy.</p>
-            </div>
-            <div className="tech-card">
-              <h5>Client SDK</h5>
-              <p>TypeScript SDK handles wallet management, note encryption, Merkle proofs, and pool interaction.</p>
-            </div>
-            <div className="tech-card">
-              <h5>Plasma Chain</h5>
-              <p>Fast-finality, low-fee L1 purpose-built for stablecoin payments. Native USDT support.</p>
-            </div>
-          </div>
-        )}
       </section>
-
-      {/* ─── DETAILED FLOW DIAGRAMS ──────────────────────────────────── */}
-      <section className="section" id="detailed-flows">
-        <h2 className="section-title">Detailed Operation Flows</h2>
-        <p className="section-lead">
-          Step-by-step breakdown of each operation — which components run, where proofs are generated, and what happens on-chain vs off-chain.
-        </p>
-
-        <Collapsible label="Deposit Flow — Public → Shielded Pool">
-          <div className="df-flow">
-            <DetailedStep num={1} action="User enters deposit amount"
-              component="DepositForm.tsx" location="browser"
-              detail="User specifies USDT amount in the React UI. No keys or recipient needed." />
-            <DetailedStep num={2} action="Generate note commitment"
-              component="ShieldedWallet (client SDK)" location="browser"
-              detail="Creates a new Note with random blinding factor. Computes commitment = keccak256(amount ‖ pubkey ‖ blinding). Encrypts note data to self using viewing key (x25519 + NaCl box)." />
-            <DetailedStep num={3} action="Approve USDT transfer"
-              component="ERC-20 Token Contract" location="on-chain"
-              detail="Browser sends ERC-20 approve(poolAddress, amount) transaction via MetaMask so the ShieldedPool can pull tokens." />
-            <DetailedStep num={4} action="Call deposit(commitment, amount, encryptedData)"
-              component="ShieldedPool.sol" location="on-chain"
-              detail="Contract transfers USDT from user into escrow, inserts commitment into the on-chain Merkle tree (20-root history), and emits a Deposit event with encrypted note data. No ZK proof required." />
-            <DetailedStep num={5} action="Store note in local wallet"
-              component="ShieldedWallet" location="browser"
-              detail="Wallet adds the new note (amount, blinding, leaf index) to its local store. Persisted in localStorage for recovery." />
-          </div>
-          <div className="df-legend">
-            <span className="df-loc df-loc--browser">browser</span> = React frontend &nbsp;
-            <span className="df-loc df-loc--onchain">on-chain</span> = Plasma smart contract
-          </div>
-        </Collapsible>
-
-        <Collapsible label="Private Transfer Flow — Shielded → Shielded (2-in-2-out)">
-          <div className="df-flow">
-            <DetailedStep num={1} action="User enters recipient pubkey, viewing key, and amount"
-              component="TransferForm.tsx" location="browser"
-              detail="Sender specifies recipient's shielded public key, viewing public key, and the USDT amount to transfer privately." />
-            <DetailedStep num={2} action="Select input notes (coin selection)"
-              component="ShieldedWallet" location="browser"
-              detail="Wallet selects 2 unspent notes that together cover the amount (greedy largest-first)." />
-            <DetailedStep num={3} action="Create output notes"
-              component="ShieldedWallet" location="browser"
-              detail="Creates Note C (recipient's pubkey, transfer amount, random blinding) and Note D (sender's pubkey, change amount, random blinding). Each encrypted with the respective viewing key." />
-            <DetailedStep num={4} action="Build Merkle proofs for input notes"
-              component="ClientMerkleTree" location="browser"
-              detail="Fetches the current Merkle root and generates inclusion proofs (sibling hashes + path bits) for each input note's leaf index from the locally-mirrored tree." />
-            <DetailedStep num={5} action="Generate SP1 Groth16 proof"
-              component="Prover (via Proxy)" location="proxy"
-              detail="Browser sends POST /prove/transfer to the Express proxy server. Proxy spawns the Rust SP1 prover binary (cargo run --release) which requests a Groth16 proof on Succint Prover Network. The proof attests: both inputs exist in tree, sender owns them (knows spending keys), output amounts = input amounts (conservation), and nullifiers are correctly derived. Takes ~1–3 min." />
-            <DetailedStep num={6} action="Submit privateTransfer(proof, publicValues, enc1, enc2)"
-              component="ShieldedPool.sol" location="on-chain"
-              detail="Contract verifies the SP1 proof against TRANSFER_VKEY. Checks nullifiers haven't been spent before. Marks both input nullifiers as spent. Inserts 2 new output commitments into Merkle tree. Emits EncryptedNote events with the encrypted output data." />
-            <DetailedStep num={7} action="Recipient syncs and decrypts"
-              component="ShieldedWallet" location="browser"
-              detail="Recipient's wallet replays EncryptedNote events, attempts decryption with their viewing key. Successfully decrypted notes are added to their local wallet as spendable." />
-          </div>
-          <div className="df-legend">
-            <span className="df-loc df-loc--browser">browser</span> = React + Client SDK &nbsp;
-            <span className="df-loc df-loc--proxy">proxy</span> = Express → Rust SP1 prover &nbsp;
-            <span className="df-loc df-loc--onchain">on-chain</span> = Plasma contract
-          </div>
-        </Collapsible>
-
-        <Collapsible label="Withdraw Flow — Shielded Pool → Public Wallet">
-          <div className="df-flow">
-            <DetailedStep num={1} action="User enters withdrawal amount and recipient address"
-              component="WithdrawForm.tsx" location="browser"
-              detail="Sender specifies the USDT amount and the public recipient address (defaults to connected wallet). Partial withdrawals create a change note." />
-            <DetailedStep num={2} action="Select input note and create change note"
-              component="ShieldedWallet" location="browser"
-              detail="Wallet selects one unspent note ≥ withdrawal amount. If note value > amount, creates a change note (sender's pubkey, remaining balance, random blinding) encrypted to self." />
-            <DetailedStep num={3} action="Build Merkle proof for input note"
-              component="ClientMerkleTree" location="browser"
-              detail="Generates inclusion proof for the input note's leaf in the locally-mirrored Merkle tree." />
-            <DetailedStep num={4} action="Generate SP1 Groth16 proof"
-              component="Prover (via Proxy)" location="proxy"
-              detail="Browser sends POST /prove/withdraw to the Express proxy. Rust prover generates a Groth16 proof attesting: input note exists, sender owns it, withdrawal amount + change = input amount, and recipient address is committed inside the proof (prevents front-running)." />
-            <DetailedStep num={5} action="Submit withdraw(proof, publicValues, encryptedChange)"
-              component="ShieldedPool.sol" location="on-chain"
-              detail="Contract verifies the SP1 proof against WITHDRAW_VKEY. Marks input nullifier as spent. Transfers the withdrawal amount in USDT from escrow to the recipient's public address. If there's change, inserts the change commitment into the Merkle tree." />
-            <DetailedStep num={6} action="Update local wallet state"
-              component="ShieldedWallet" location="browser"
-              detail="Marks the spent note's nullifier. If a change note was created, adds it to wallet. USDT appears in recipient's public wallet balance." />
-          </div>
-          <div className="df-legend">
-            <span className="df-loc df-loc--browser">browser</span> = React + Client SDK &nbsp;
-            <span className="df-loc df-loc--proxy">proxy</span> = Express → Rust SP1 prover &nbsp;
-            <span className="df-loc df-loc--onchain">on-chain</span> = Plasma contract
-          </div>
-        </Collapsible>
-      </section>
-
-      {/* ─── TECHNICAL ARCHITECTURE ──────────────────────────────────── */}
-      <section className="section" id="architecture">
-        <h2 className="section-title">System Architecture</h2>
-        <p className="section-lead">
-          How the system components connect — from the browser to the blockchain.
-        </p>
-
-        <Collapsible label="Technical Architecture Diagram">
-          <div className="arch-diagram">
-            <ArchRow label="Browser (off-chain)" type="offchain" items={[
-              { name: 'React Frontend', desc: 'Vite + React 18 — DepositForm, TransferForm, WithdrawForm, Dashboard, NotesList' },
-              { name: 'ShieldedWallet', desc: 'Key management, note creation, coin selection, note encryption/decryption (x25519 + NaCl)' },
-              { name: 'ClientMerkleTree', desc: 'Locally-mirrored binary Merkle tree — builds inclusion proofs for ZK circuits' },
-              { name: 'BrowserPoolClient', desc: 'Orchestrates deposit / transfer / withdraw — calls proxy for proofs, submits txs via ethers.js' },
-            ]} />
-
-            <div className="arch-connector">
-              <div className="arch-connector-line" />
-              <span className="arch-connector-label">HTTP (POST /prove/transfer, /prove/withdraw)</span>
-            </div>
-
-            <ArchRow label="Proxy Server (off-chain)" type="infra" items={[
-              { name: 'Express Server', desc: 'Node.js proxy — receives proof requests from browser, forwards to Rust prover subprocess' },
-              { name: 'SP1 Prover (Rust)', desc: 'Generates Groth16 proofs via SP1 zkVM — transfer circuit (2-in-2-out) and withdraw circuit — spawned as cargo subprocess' },
-            ]} />
-
-            <div className="arch-connector">
-              <div className="arch-connector-line" />
-              <span className="arch-connector-label">JSON-RPC (ethers.js → Plasma node)</span>
-            </div>
-
-            <ArchRow label="Plasma Chain (on-chain)" type="onchain" items={[
-              { name: 'ShieldedPool.sol', desc: 'Main contract — deposit(), privateTransfer(), withdraw(). Holds USDT escrow, Merkle tree of commitments, nullifier registry' },
-              { name: 'MerkleTree.sol', desc: 'Incremental keccak256 binary Merkle tree with 30-root history ring buffer for concurrent proof generation' },
-              { name: 'SP1 Verifier', desc: 'On-chain Groth16 proof verification — validates proofs against TRANSFER_VKEY and WITHDRAW_VKEY' },
-              { name: 'USDT (ERC-20)', desc: 'Stablecoin token contract — native on Plasma L1, used for deposits and withdrawal payouts' },
-            ]} />
-          </div>
-
-          <div className="arch-key">
-            <h5>On-chain vs Off-chain</h5>
-            <div className="arch-key-grid">
-              <div className="arch-key-item">
-                <span className="arch-key-dot arch-key-dot--onchain" /> <strong>On-chain:</strong> Commitments, nullifiers, token escrow, proof verification
-              </div>
-              <div className="arch-key-item">
-                <span className="arch-key-dot arch-key-dot--offchain" /> <strong>Off-chain:</strong> Note contents, amounts, keys, wallet state, Merkle proofs
-              </div>
-              <div className="arch-key-item">
-                <span className="arch-key-dot arch-key-dot--infra" /> <strong>Infrastructure:</strong> ZK proof generation (Rust SP1 prover via Express proxy)
-              </div>
-            </div>
-          </div>
-        </Collapsible>
-      </section>
-
 
       {/* ─── WHY PLASMA ──────────────────────────────────────────────── */}
       <section className="section" id="plasma">
         <h2 className="section-title">Why Plasma?</h2>
-        <p className="section-lead">
-          The ideal chain for confidential stablecoin payments.
-        </p>
 
         <div className="plasma-grid">
           <div className="plasma-card">
             <div className="plasma-icon">⚡</div>
             <h4>Fast Finality</h4>
-            <p>Transactions confirm in seconds — critical for real-time payment flows.</p>
+            <p>Transactions confirm in seconds.</p>
           </div>
           <div className="plasma-card">
             <div className="plasma-icon">🪙</div>
             <h4>Low Fees</h4>
-            <p>Micro-cent transaction costs make frequent payments practical and scalable.</p>
+            <p>Sub-cent gas costs for frequent payments.</p>
           </div>
           <div className="plasma-card">
             <div className="plasma-icon">💵</div>
             <h4>Stablecoin-Native</h4>
-            <p>Plasma is purpose-built as a stablecoin L1 — USDT is a first-class citizen.</p>
+            <p>Purpose-built L1 — USDT is first-class.</p>
           </div>
-        </div>
-
-        <div className="plasma-note">
-          <strong>This is about payments UX, not DeFi.</strong> No swaps, no lending,
-          no yield — just fast, cheap, confidential payments that work for real businesses.
         </div>
       </section>
 
@@ -566,6 +282,188 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
         <button className="btn-cta btn-cta--lg" onClick={onLaunchApp}>
           Launch App →
         </button>
+      </section>
+
+      {/* ─── TECHNICAL DEEP DIVE (collapsed) ─────────────────────────── */}
+      <section className="section" id="technical">
+        <Collapsible label="Technical Deep Dive">
+          {/* Transfer mechanics */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 className="section-subtitle">How Private Transfers Work</h3>
+            <div className="mechanics-flow">
+              <div className="mech-col">
+                <h4>Inputs</h4>
+                <div className="mech-box mech-box--hidden">Note A<br /><small>owned by sender</small></div>
+                <div className="mech-box mech-box--hidden">Note B<br /><small>owned by sender</small></div>
+              </div>
+              <div className="mech-arrow">
+                <div className="mech-arrow-line" />
+                <div className="mech-proof-label">ZK Proof</div>
+                <ul className="mech-checklist">
+                  <li>✓ Notes exist in Merkle tree</li>
+                  <li>✓ Sender owns inputs</li>
+                  <li>✓ Total value conserved</li>
+                  <li>✓ Nullifiers prevent double-spend</li>
+                </ul>
+              </div>
+              <div className="mech-col">
+                <h4>Outputs</h4>
+                <div className="mech-box mech-box--hidden">Note C<br /><small>for recipient</small></div>
+                <div className="mech-box mech-box--hidden">Note D<br /><small>change back to sender</small></div>
+              </div>
+            </div>
+            <div className="mech-delivery">
+              <span>📩</span> Encrypted notes are delivered to recipients — only the intended party can decrypt and spend them.
+            </div>
+          </div>
+
+          {/* Tech stack cards */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 className="section-subtitle">Components</h3>
+            <div className="tech-grid">
+              <div className="tech-card">
+                <h5>Smart Contract</h5>
+                <p>On-chain state: Merkle tree of commitments, nullifier set, USDT escrow. Verifies SP1 proofs.</p>
+              </div>
+              <div className="tech-card">
+                <h5>Prover</h5>
+                <p>Generates SP1 zero-knowledge proofs for transfers and withdrawals via proxy or locally.</p>
+              </div>
+              <div className="tech-card">
+                <h5>Client SDK</h5>
+                <p>TypeScript SDK handles wallet management, note encryption, Merkle proofs, and pool interaction.</p>
+              </div>
+              <div className="tech-card">
+                <h5>Plasma Chain</h5>
+                <p>Fast-finality, low-fee L1 purpose-built for stablecoin payments.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed flows */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 className="section-subtitle">Detailed Operation Flows</h3>
+
+            <Collapsible label="Deposit Flow — Public → Shielded Pool">
+              <div className="df-flow">
+                <DetailedStep num={1} action="User enters deposit amount"
+                  component="DepositForm.tsx" location="browser"
+                  detail="User specifies USDT amount in the React UI. No keys or recipient needed." />
+                <DetailedStep num={2} action="Generate note commitment"
+                  component="ShieldedWallet (client SDK)" location="browser"
+                  detail="Creates a new Note with random blinding factor. Computes commitment = keccak256(amount || pubkey || blinding). Encrypts note data to self using viewing key (x25519 + NaCl box)." />
+                <DetailedStep num={3} action="Approve USDT transfer"
+                  component="ERC-20 Token Contract" location="on-chain"
+                  detail="Browser sends ERC-20 approve(poolAddress, amount) transaction via MetaMask." />
+                <DetailedStep num={4} action="Call deposit(commitment, amount, encryptedData)"
+                  component="ShieldedPool.sol" location="on-chain"
+                  detail="Contract transfers USDT from user into escrow, inserts commitment into the on-chain Merkle tree, and emits a Deposit event." />
+                <DetailedStep num={5} action="Store note in local wallet"
+                  component="ShieldedWallet" location="browser"
+                  detail="Wallet adds the new note to its local store. Persisted in localStorage." />
+              </div>
+            </Collapsible>
+
+            <Collapsible label="Private Transfer Flow — Shielded → Shielded (2-in-2-out)">
+              <div className="df-flow">
+                <DetailedStep num={1} action="User enters recipient pubkey, viewing key, and amount"
+                  component="TransferForm.tsx" location="browser"
+                  detail="Sender specifies recipient's shielded public key, viewing public key, and USDT amount." />
+                <DetailedStep num={2} action="Select input notes (coin selection)"
+                  component="ShieldedWallet" location="browser"
+                  detail="Wallet selects 2 unspent notes that together cover the amount." />
+                <DetailedStep num={3} action="Create output notes"
+                  component="ShieldedWallet" location="browser"
+                  detail="Creates Note C (recipient) and Note D (change). Each encrypted with the respective viewing key." />
+                <DetailedStep num={4} action="Build Merkle proofs for input notes"
+                  component="ClientMerkleTree" location="browser"
+                  detail="Generates inclusion proofs for each input note from the locally-mirrored tree." />
+                <DetailedStep num={5} action="Generate SP1 Groth16 proof"
+                  component="Prover (via Proxy)" location="proxy"
+                  detail="Proxy spawns the Rust SP1 prover which requests a Groth16 proof on the Succinct Prover Network. Takes ~1-3 min." />
+                <DetailedStep num={6} action="Submit privateTransfer(proof, publicValues, enc1, enc2)"
+                  component="ShieldedPool.sol" location="on-chain"
+                  detail="Contract verifies the SP1 proof, marks nullifiers as spent, inserts 2 new commitments, emits EncryptedNote events." />
+                <DetailedStep num={7} action="Recipient syncs and decrypts"
+                  component="ShieldedWallet" location="browser"
+                  detail="Recipient's wallet replays EncryptedNote events, decrypts with viewing key, adds spendable notes." />
+              </div>
+            </Collapsible>
+
+            <Collapsible label="Withdraw Flow — Shielded Pool → Public Wallet">
+              <div className="df-flow">
+                <DetailedStep num={1} action="User enters withdrawal amount and recipient address"
+                  component="WithdrawForm.tsx" location="browser"
+                  detail="USDT amount and public recipient address. Partial withdrawals create a change note." />
+                <DetailedStep num={2} action="Select input note and create change note"
+                  component="ShieldedWallet" location="browser"
+                  detail="Selects one unspent note >= amount. Creates change note if needed, encrypted to self." />
+                <DetailedStep num={3} action="Build Merkle proof for input note"
+                  component="ClientMerkleTree" location="browser"
+                  detail="Generates inclusion proof for the input note in the locally-mirrored tree." />
+                <DetailedStep num={4} action="Generate SP1 Groth16 proof"
+                  component="Prover (via Proxy)" location="proxy"
+                  detail="Rust prover generates a Groth16 proof. Recipient address is committed inside the proof to prevent front-running." />
+                <DetailedStep num={5} action="Submit withdraw(proof, publicValues, encryptedChange)"
+                  component="ShieldedPool.sol" location="on-chain"
+                  detail="Contract verifies proof, marks nullifier as spent, transfers USDT to recipient. Change commitment inserted if present." />
+                <DetailedStep num={6} action="Update local wallet state"
+                  component="ShieldedWallet" location="browser"
+                  detail="Marks spent nullifier. Adds change note if created. USDT appears in public wallet." />
+              </div>
+            </Collapsible>
+          </div>
+
+          {/* Architecture */}
+          <div>
+            <h3 className="section-subtitle">System Architecture</h3>
+            <div className="arch-diagram">
+              <ArchRow label="Browser (off-chain)" type="offchain" items={[
+                { name: 'React Frontend', desc: 'Vite + React 18 — deposit, transfer, withdraw UI' },
+                { name: 'ShieldedWallet', desc: 'Key management, note creation, coin selection, NaCl encryption' },
+                { name: 'ClientMerkleTree', desc: 'Locally-mirrored Merkle tree for ZK inclusion proofs' },
+                { name: 'BrowserPoolClient', desc: 'Orchestrates all operations — calls proxy for proofs, submits txs' },
+              ]} />
+
+              <div className="arch-connector">
+                <div className="arch-connector-line" />
+                <span className="arch-connector-label">HTTP (POST /prove/transfer, /prove/withdraw)</span>
+              </div>
+
+              <ArchRow label="Proxy Server (off-chain)" type="infra" items={[
+                { name: 'Express Server', desc: 'Receives proof requests, forwards to Rust prover subprocess' },
+                { name: 'SP1 Prover (Rust)', desc: 'Groth16 proofs via SP1 zkVM — transfer and withdraw circuits' },
+              ]} />
+
+              <div className="arch-connector">
+                <div className="arch-connector-line" />
+                <span className="arch-connector-label">JSON-RPC (ethers.js → Plasma node)</span>
+              </div>
+
+              <ArchRow label="Plasma Chain (on-chain)" type="onchain" items={[
+                { name: 'ShieldedPool.sol', desc: 'deposit(), privateTransfer(), withdraw() — USDT escrow + Merkle tree + nullifier registry' },
+                { name: 'MerkleTree.sol', desc: 'Incremental keccak256 binary tree with 30-root history' },
+                { name: 'SP1 Verifier', desc: 'On-chain Groth16 proof verification' },
+                { name: 'USDT (ERC-20)', desc: 'Stablecoin token — native on Plasma' },
+              ]} />
+            </div>
+
+            <div className="arch-key">
+              <h5>On-chain vs Off-chain</h5>
+              <div className="arch-key-grid">
+                <div className="arch-key-item">
+                  <span className="arch-key-dot arch-key-dot--onchain" /> <strong>On-chain:</strong> Commitments, nullifiers, token escrow, proof verification
+                </div>
+                <div className="arch-key-item">
+                  <span className="arch-key-dot arch-key-dot--offchain" /> <strong>Off-chain:</strong> Note contents, amounts, keys, wallet state, Merkle proofs
+                </div>
+                <div className="arch-key-item">
+                  <span className="arch-key-dot arch-key-dot--infra" /> <strong>Infrastructure:</strong> ZK proof generation (Rust SP1 prover via Express proxy)
+                </div>
+              </div>
+            </div>
+          </div>
+        </Collapsible>
       </section>
 
       <footer className="landing-footer">

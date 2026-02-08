@@ -46,11 +46,9 @@
 #problem        { animation-delay: 0.05s; }
 #solution       { animation-delay: 0.10s; }
 #lifecycle      { animation-delay: 0.15s; }
-#mechanics      { animation-delay: 0.20s; }
-#detailed-flows { animation-delay: 0.25s; }
-#architecture   { animation-delay: 0.30s; }
-#use-cases      { animation-delay: 0.35s; }
-#plasma         { animation-delay: 0.40s; }
+#use-cases      { animation-delay: 0.20s; }
+#plasma         { animation-delay: 0.25s; }
+#technical      { animation-delay: 0.30s; }
 
 @keyframes reveal {
   to {
@@ -684,6 +682,58 @@
   color: var(--error);
   font-size: 11px;
   margin-left: auto;
+}
+
+/* ─── Compact use cases ────────────────────────────────────────────── */
+
+.use-cases-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.uc-compact-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition);
+}
+
+.uc-compact-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.uc-compact-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.uc-compact-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.uc-compact-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ─── Section subtitle (for deep dive) ─────────────────────────────── */
+
+.section-subtitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
 }
 
 /* ─── Plasma section ────────────────────────────────────────────────── */
