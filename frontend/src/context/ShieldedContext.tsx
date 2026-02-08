@@ -29,6 +29,7 @@ interface ShieldedState {
   // Actions
   initWallet: () => void;
   importWallet: (spendingKeyHex: string) => void;
+  exportWallet: () => string | null;
   resetWallet: () => void;
   sync: () => Promise<void>;
   deposit: (amount: bigint) => Promise<void>;
@@ -51,6 +52,7 @@ const ShieldedContext = createContext<ShieldedState>({
   txProgress: null,
   initWallet: () => {},
   importWallet: () => {},
+  exportWallet: () => null,
   resetWallet: () => {},
   sync: async () => {},
   deposit: async () => {},
@@ -148,6 +150,12 @@ export function ShieldedProvider({ children }: { children: React.ReactNode }) {
     saveWallet(wallet);
   }, [saveWallet]);
 
+  const exportWallet = useCallback((): string | null => {
+    const w = walletRef.current;
+    if (!w) return null;
+    return w.toJSON();
+  }, []);
+
   const resetWallet = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setShieldedWallet(null);
@@ -237,6 +245,7 @@ export function ShieldedProvider({ children }: { children: React.ReactNode }) {
         txProgress,
         initWallet,
         importWallet,
+        exportWallet,
         resetWallet,
         sync,
         deposit,
