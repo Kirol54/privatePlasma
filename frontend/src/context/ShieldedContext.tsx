@@ -178,7 +178,14 @@ export function ShieldedProvider({ children }: { children: React.ReactNode }) {
       updateState();
       setSyncMessage('Sync complete');
     } catch (err: any) {
-      setSyncMessage(`Sync failed: ${err.message}`);
+      const msg = err.message || String(err);
+      if (msg.includes('10,000 range') || msg.includes('10000') || msg.includes('-32614')) {
+        setSyncMessage(
+          'RPC limit: eth_getLogs is limited to 10,000 blocks. The contract deployment is too far back. A fresh contract deployment is needed to sync.'
+        );
+      } else {
+        setSyncMessage(`Sync failed: ${msg}`);
+      }
     } finally {
       setIsSyncing(false);
     }

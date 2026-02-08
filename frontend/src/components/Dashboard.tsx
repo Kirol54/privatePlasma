@@ -228,7 +228,11 @@ export function Dashboard() {
       </div>
 
       {syncMessage && (
-        <div className={`status ${isSyncing ? 'status-info' : 'status-success'}`}>
+        <div className={`status ${
+          syncMessage.includes('RPC limit') ? 'status-warning' :
+          syncMessage.includes('failed') ? 'status-error' :
+          isSyncing ? 'status-info' : 'status-success'
+        }`}>
           {syncMessage}
         </div>
       )}
