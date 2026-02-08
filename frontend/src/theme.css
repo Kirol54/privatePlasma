@@ -1,28 +1,46 @@
 :root {
-  --bg-primary: #0a1f0a;
-  --bg-secondary: #0f2a0f;
-  --bg-card: #1a3a1a;
-  --bg-card-hover: #1f451f;
-  --bg-input: #0d250d;
-  --accent: #00ff88;
+  /* “Deep Space” Backgrounds */
+  --bg-primary: #050a05;       /* Almost black green */
+  --bg-secondary: #0a110a;     /* Slightly lighter */
+  --bg-card: rgba(20, 35, 20, 0.6); /* Glassmorphism base */
+  --bg-card-hover: rgba(30, 50, 30, 0.7);
+  --bg-input: rgba(10, 20, 10, 0.5);
+
+  /* Vibrant Accents */
+  --accent: #00ffa3;           /* Electric mint */
   --accent-dim: #4ade80;
-  --accent-glow: rgba(0, 255, 136, 0.15);
-  --text-primary: #e8f5e8;
-  --text-secondary: #8fbc8f;
-  --text-muted: #5a8a5a;
-  --border: #2d5a2d;
-  --border-focus: #00ff88;
-  --error: #ff6b6b;
-  --error-bg: rgba(255, 107, 107, 0.1);
-  --success: #00ff88;
-  --success-bg: rgba(0, 255, 136, 0.1);
+  --accent-glow: rgba(0, 255, 163, 0.15);
+  --accent-glow-strong: rgba(0, 255, 163, 0.35);
+
+  /* Typography */
+  --text-primary: #f0fdf4;     /* Crisp white-green */
+  --text-secondary: #86efac;   /* Soft mint */
+  --text-muted: #4ade80;       /* Muted green */
+
+  /* Structural */
+  --border: rgba(45, 90, 45, 0.4);
+  --border-light: rgba(75, 150, 75, 0.3);
+  --border-focus: #00ffa3;
+
+  /* Utility Colors */
+  --error: #ff5555;
+  --error-bg: rgba(255, 85, 85, 0.15);
+  --success: #00ffa3;
+  --success-bg: rgba(0, 255, 163, 0.15);
   --warning: #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.1);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.1);
-  --transition: 0.2s ease;
+  --warning-bg: rgba(251, 191, 36, 0.15);
+
+  /* Shapes & Effects */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 32px rgba(0, 255, 163, 0.15);
+  --backdrop-blur: blur(12px);
+
+  --transition: 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

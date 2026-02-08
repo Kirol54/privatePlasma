@@ -115,6 +115,7 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
 
   return (
     <div className="landing">
+      <div className="landing-bg" />
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="hero">
         <div className="hero-badge">Built on Plasma</div>
