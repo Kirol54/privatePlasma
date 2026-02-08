@@ -7,12 +7,18 @@ import { DepositForm } from './components/DepositForm';
 import { TransferForm } from './components/TransferForm';
 import { WithdrawForm } from './components/WithdrawForm';
 import { NotesList } from './components/NotesList';
+import { LandingPage } from './components/LandingPage';
 
 type Tab = 'deposit' | 'transfer' | 'withdraw' | 'notes';
 
 function AppContent() {
   const { address } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
+  const [showLanding, setShowLanding] = useState(true);
+
+  if (!address && showLanding) {
+    return <LandingPage onLaunchApp={() => setShowLanding(false)} />;
+  }
 
   if (!address) {
     return (
