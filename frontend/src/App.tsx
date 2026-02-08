@@ -18,18 +18,27 @@ function AppContent() {
     () => !sessionStorage.getItem('hideLanding')
   );
 
-  if (!address && showLanding) {
-    return <LandingPage onLaunchApp={() => {
-      sessionStorage.setItem('hideLanding', '1');
-      setShowLanding(false);
-    }} />;
+  const goToLanding = () => {
+    sessionStorage.removeItem('hideLanding');
+    setShowLanding(true);
+  };
+
+  const dismissLanding = () => {
+    sessionStorage.setItem('hideLanding', '1');
+    setShowLanding(false);
+  };
+
+  if (showLanding) {
+    return <LandingPage onLaunchApp={dismissLanding} />;
   }
 
   if (!address) {
     return (
       <div className="app-container">
         <div className="app-header">
-          <h1>Shielded Pool</h1>
+          <button className="header-logo" onClick={goToLanding} title="Back to landing page">
+            🛡️ Shielded Pool
+          </button>
           <p>Private payments on Plasma</p>
         </div>
         <ConnectWallet />
@@ -40,7 +49,9 @@ function AppContent() {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>Shielded Pool</h1>
+        <button className="header-logo" onClick={goToLanding} title="Back to landing page">
+          🛡️ Shielded Pool
+        </button>
         <p>Private payments on Plasma</p>
       </div>
 

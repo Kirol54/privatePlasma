@@ -21,12 +21,14 @@
 }
 
 /* stagger each section */
-#problem   { animation-delay: 0.05s; }
-#solution  { animation-delay: 0.10s; }
-#lifecycle { animation-delay: 0.15s; }
-#mechanics { animation-delay: 0.20s; }
-#use-cases { animation-delay: 0.25s; }
-#plasma    { animation-delay: 0.30s; }
+#problem        { animation-delay: 0.05s; }
+#solution       { animation-delay: 0.10s; }
+#lifecycle      { animation-delay: 0.15s; }
+#mechanics      { animation-delay: 0.20s; }
+#detailed-flows { animation-delay: 0.25s; }
+#architecture   { animation-delay: 0.30s; }
+#use-cases      { animation-delay: 0.35s; }
+#plasma         { animation-delay: 0.40s; }
 
 @keyframes reveal {
   to {
@@ -766,4 +768,279 @@
     width: 100%;
     margin-top: 4px;
   }
+
+  .arch-row-items {
+    grid-template-columns: 1fr;
+  }
+
+  .arch-key-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Collapsible ───────────────────────────────────────────────────── */
+
+.collapsible {
+  margin-bottom: 16px;
+}
+
+.collapsible-trigger {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.collapsible-trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.collapsible-body {
+  margin-top: 12px;
+  animation: reveal 0.3s ease forwards;
+}
+
+/* ─── Architecture diagram ──────────────────────────────────────────── */
+
+.arch-diagram {
+  margin-bottom: 20px;
+}
+
+.arch-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 0;
+}
+
+.arch-row--offchain {
+  background: rgba(0, 255, 136, 0.04);
+  border-color: rgba(0, 255, 136, 0.2);
+}
+
+.arch-row--infra {
+  background: rgba(96, 165, 250, 0.04);
+  border-color: rgba(96, 165, 250, 0.2);
+}
+
+.arch-row--onchain {
+  background: rgba(251, 191, 36, 0.04);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.arch-row-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.arch-row--offchain .arch-row-label { color: var(--accent); }
+.arch-row--infra .arch-row-label { color: #60a5fa; }
+.arch-row--onchain .arch-row-label { color: var(--warning); }
+
+.arch-row-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.arch-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.arch-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.arch-item-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.arch-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.arch-connector-line {
+  width: 2px;
+  height: 20px;
+  background: var(--border);
+}
+
+.arch-connector-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 2px 10px;
+  background: var(--bg-secondary);
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.arch-key {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.arch-key h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.arch-key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.arch-key-item {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.arch-key-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 2px;
+}
+
+.arch-key-dot--onchain { background: var(--warning); }
+.arch-key-dot--offchain { background: var(--accent); }
+.arch-key-dot--infra { background: #60a5fa; }
+
+/* ─── Detailed flow diagrams ────────────────────────────────────────── */
+
+.df-flow {
+  margin-bottom: 12px;
+}
+
+.df-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(45, 90, 45, 0.3);
+}
+
+.df-step:last-child {
+  border-bottom: none;
+}
+
+.df-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid var(--border);
+}
+
+.df-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.df-action {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.df-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.df-loc {
+  padding: 1px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.df-loc--onchain, .df-loc--on-chain {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warning);
+}
+
+.df-loc--offchain, .df-loc--off-chain {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.df-loc--browser {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.df-loc--proxy {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+}
+
+.df-comp {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.df-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.df-legend {
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
 }
