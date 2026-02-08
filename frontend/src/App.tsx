@@ -8,6 +8,7 @@ import { TransferForm } from './components/TransferForm';
 import { WithdrawForm } from './components/WithdrawForm';
 import { NotesList } from './components/NotesList';
 import { LandingPage } from './components/LandingPage';
+import { ProxySettingsModal } from './components/ProxySettingsModal'; // Import logic
 
 type Tab = 'deposit' | 'transfer' | 'withdraw' | 'notes';
 
@@ -17,6 +18,7 @@ function AppContent() {
   const [showLanding, setShowLanding] = useState(
     () => !sessionStorage.getItem('hideLanding')
   );
+  const [showSettings, setShowSettings] = useState(false); // Settings state
 
   const goToLanding = () => {
     sessionStorage.removeItem('hideLanding');
@@ -32,9 +34,33 @@ function AppContent() {
     return <LandingPage onLaunchApp={dismissLanding} />;
   }
 
+  // Common header button for settings
+  const SettingsButton = () => (
+    <button
+      onClick={() => setShowSettings(true)}
+      style={{
+        position: 'absolute',
+        top: '24px',
+        right: '16px',
+        background: 'none',
+        border: 'none',
+        fontSize: '20px',
+        cursor: 'pointer',
+        opacity: 0.7,
+        transition: 'opacity 0.2s',
+      }}
+      title="Settings"
+      onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+      onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
+    >
+      ⚙️
+    </button>
+  );
+
   if (!address) {
     return (
-      <div className="app-container">
+      <div className="app-container" style={{ position: 'relative' }}>
+        <SettingsButton />
         <div className="app-header">
           <button className="header-logo" onClick={goToLanding} title="Back to landing page">
             🛡️ Shielded Pool
@@ -42,12 +68,14 @@ function AppContent() {
           <p>Private payments on Plasma</p>
         </div>
         <ConnectWallet />
+        {showSettings && <ProxySettingsModal onClose={() => setShowSettings(false)} />}
       </div>
     );
   }
 
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ position: 'relative' }}>
+      <SettingsButton />
       <div className="app-header">
         <button className="header-logo" onClick={goToLanding} title="Back to landing page">
           🛡️ Shielded Pool
@@ -77,6 +105,8 @@ function AppContent() {
       {activeTab === 'transfer' && <TransferForm />}
       {activeTab === 'withdraw' && <WithdrawForm />}
       {activeTab === 'notes' && <NotesList />}
+
+      {showSettings && <ProxySettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

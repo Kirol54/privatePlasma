@@ -5,7 +5,8 @@
  * to the proof generation proxy.
  */
 
-import { config } from '../config';
+// import { config } from '../config'; // config is no longer used directly for proxyUrl
+import { getProxyUrl } from './settings';
 import { bytesToHex } from './browser-crypto';
 import type { MerkleProofStep } from '../../../client/src/types.js';
 
@@ -77,7 +78,8 @@ export async function proveTransfer(request: BrowserTransferRequest): Promise<Pr
     root: Array.from(request.root),
   };
 
-  const res = await fetch(`${config.proxyUrl}/prove/transfer`, {
+  const proxyUrl = getProxyUrl();
+  const res = await fetch(`${proxyUrl}/prove/transfer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -108,14 +110,15 @@ export async function proveWithdraw(request: BrowserWithdrawRequest): Promise<Pr
     withdraw_amount: Number(request.withdrawAmount),
     change_note: request.changeNote
       ? {
-          amount: Number(request.changeNote.amount),
-          pubkey: Array.from(request.changeNote.pubkey),
-          blinding: Array.from(request.changeNote.blinding),
-        }
+        amount: Number(request.changeNote.amount),
+        pubkey: Array.from(request.changeNote.pubkey),
+        blinding: Array.from(request.changeNote.blinding),
+      }
       : null,
   };
 
-  const res = await fetch(`${config.proxyUrl}/prove/withdraw`, {
+  const proxyUrl = getProxyUrl();
+  const res = await fetch(`${proxyUrl}/prove/withdraw`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
