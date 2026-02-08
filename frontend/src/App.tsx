@@ -62,8 +62,8 @@ function AppContent() {
       <div className="app-container" style={{ position: 'relative' }}>
         <SettingsButton />
         <div className="app-header">
-          <button className="header-logo" onClick={goToLanding} title="Back to landing page">
-            🛡️ Shielded Pool
+          <button className="header-logo" onClick={goToLanding} title="Back to landing page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <img src="/logo.svg" alt="Plasma Confidential SP1" style={{ height: '60px', width: 'auto' }} />
           </button>
           <p>Private payments on Plasma</p>
         </div>
@@ -77,8 +77,8 @@ function AppContent() {
     <div className="app-container" style={{ position: 'relative' }}>
       <SettingsButton />
       <div className="app-header">
-        <button className="header-logo" onClick={goToLanding} title="Back to landing page">
-          🛡️ Shielded Pool
+        <button className="header-logo" onClick={goToLanding} title="Back to landing page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <img src="/logo.svg" alt="Plasma Confidential SP1" style={{ height: '60px', width: 'auto' }} />
         </button>
         <p>Private payments on Plasma</p>
       </div>

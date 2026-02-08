@@ -118,12 +118,15 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="hero">
         <div className="hero-badge">Built on Plasma</div>
-        <h1 className="hero-title">
-          Confidential USDT Payments
-        </h1>
+
+        {/* Logo and Title */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', marginBottom: '32px' }}>
+          <img src="/logo.svg" alt="Plasma Confidential SP1" style={{ maxWidth: '600px', width: '100%', height: 'auto' }} />
+        </div>
+
         <p className="hero-sub">
-          Enterprise-grade private stablecoin transfers — amounts, balances, and
-          counterparties hidden by default, with optional selective disclosure.
+          Enterprise-grade private stablecoin transfers on Plasma using SP1 zero-knowledge proofs.
+          Amounts, balances, and counterparties are hidden by default, with optional selective disclosure.
         </p>
 
         {/* animated mini flow */}

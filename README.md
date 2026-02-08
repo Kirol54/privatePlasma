@@ -1,4 +1,6 @@
-# Plasma Shielded Pool
+# Plasma Confidential SP1
+
+![Plasma Confidential SP1](frontend/public/plasma.png)
 
 Private USDT payments on Plasma using SP1 zero-knowledge proofs.
 
