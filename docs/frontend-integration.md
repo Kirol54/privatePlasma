@@ -108,14 +108,28 @@ The exported JSON uses the same format as `localStorage` persistence (via `Brows
 6. The proof comes back through the proxy to the browser
 7. MetaMask pops up — the user signs the on-chain transaction
 
+### Why the proxy is used in this build
+
+The Express proxy exists for **practical tooling reasons**, not security design. Browsers cannot run Rust or invoke `cargo` directly, so the proxy bridges the browser to the SP1 SDK. This approach was chosen for speed during the hackathon. It is not a protocol requirement — the proxy can be removed entirely in future architectures.
+
+### Alternative proving paths
+
+- **Local CPU proving via CLI** — The protocol can be used entirely from the command line (`make execute-*`, `make e2e`) without the frontend or proxy. With `SP1_PROVER=cpu`, proofs are generated locally on the user's machine. All private inputs (keys, notes, amounts) stay local. This is the **recommended setup for maximum privacy** today.
+- **Direct client → prover (future)** — In principle, the browser could submit proof requests directly to the Succinct Prover Network, removing the proxy entirely. This was not implemented due to time constraints and the need to replicate SP1 SDK request logic in-browser.
+
+### Recommendation
+
+The frontend + proxy setup is designed for **demos and UX exploration**. For privacy-sensitive or enterprise usage, **local CLI proving or on-prem GPU provers** are preferred. Enterprise deployments can use TEE-backed SP1 provers or whitelisted on-prem GPU provers to keep private inputs within a trusted boundary.
+
 ### Privacy tradeoff
 
 The Succinct Prover Network can see raw inputs during proof generation. The resulting proof reveals nothing, but the proving service itself is trusted.
 
-| Approach | Privacy | Performance | Practical? |
-|----------|---------|-------------|------------|
-| **Succinct Prover Network** (our approach) | Trust Succinct's secure enclaves | ~2-5 min | Yes |
-| Client-side local proving | Fully trustless | ~16GB RAM, minutes | Not in a browser |
+| Mode | Trust | Privacy | Best for |
+|------|-------|---------|----------|
+| **Frontend + proxy** (current demo) | Proxy + prover | Proxy and prover see raw inputs | Demos, UX testing |
+| **Direct client → prover** (future) | Prover only | Prover sees raw inputs during proving | Browser-based use without proxy |
+| **Local CLI CPU proving** | Local machine only | All inputs stay on user's machine | Maximum privacy, enterprise |
 
 ## Frontend Components
 

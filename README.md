@@ -288,6 +288,51 @@ Set these in `.env` to customise the test flow (defaults shown):
 
 See **[E2E Test Guide](docs/e2e-test.md)** for the full step-by-step breakdown, example output, and troubleshooting.
 
+## Proving Architecture & Trust Model
+
+### Why the Express proxy exists
+
+The React frontend cannot run Rust or `cargo` directly in the browser. The Express proxy (`proxy/`) bridges this gap: it receives proof requests from the browser and invokes the SP1 SDK (Rust) as a subprocess. This architecture was chosen for speed and familiarity during the hackathon — **it is not a protocol requirement**. The proxy is an implementation convenience, not a fundamental part of the design.
+
+### Local-first recommended usage
+
+The entire system can be run **locally via CLI** without the frontend, proxy, or any remote prover:
+
+```bash
+# Execute circuits locally on CPU (no proof generation, fast verification)
+make execute-transfer
+make execute-withdraw
+
+# Run the full deposit → transfer → withdraw lifecycle with real proofs
+# Set SP1_PROVER=cpu to prove locally instead of using the Succinct Network
+SP1_PROVER=cpu make e2e
+```
+
+In this mode, all private inputs (spending keys, note data, amounts) stay entirely on the user's machine. **This is the recommended setup for maximum privacy today.**
+
+### Direct client → prover (future)
+
+In principle, browsers could submit proof requests directly to the Succinct Prover Network (or any compatible prover service), removing the proxy entirely. This was not implemented due to hackathon time constraints and the need to replicate SP1 SDK request-building logic in-browser. It remains a viable future improvement.
+
+### Trust assumptions
+
+| Mode | What you trust | Privacy |
+|------|---------------|---------|
+| **Local CPU proving** (`SP1_PROVER=cpu`) | Only the local machine | Maximum — all inputs stay local |
+| **Direct client → prover** (future) | The prover service only | Prover sees raw inputs during proving |
+| **Frontend + proxy** (current demo) | The proxy server + the prover service | Proxy and prover both see raw inputs |
+
+In all modes, the resulting ZK proof reveals nothing about private inputs. Trust differences only affect who sees inputs *during* proof generation.
+
+### Enterprise / production options
+
+- **TEE-backed SP1 proving** — The Succinct Prover Network supports Trusted Execution Environment (TEE) enclaves, reducing data exposure when using remote provers. Inputs are processed inside the enclave and not visible to the prover operator.
+- **On-prem enterprise deployments** — Organizations can run their own GPU provers on internal infrastructure. Whitelisted on-prem provers ensure that private inputs never leave the corporate network.
+
+These options allow enterprises to use remote proving without exposing confidential transaction data to third parties.
+
+---
+
 ## Documentation
 
 - **[E2E Test Guide](docs/e2e-test.md)** — Full walkthrough of the end-to-end test script. Configuration (including recipient viewing keys), example output, Merkle tree mirroring, proof generation, and troubleshooting.

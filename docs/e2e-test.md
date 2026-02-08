@@ -2,6 +2,8 @@
 
 Full lifecycle test against a deployed ShieldedPool contract: **deposit → private transfer → withdraw**, with real Groth16 proofs generated via the Succinct Prover Network.
 
+> **Note:** The E2E scripts demonstrate **fully local execution** of the entire deposit → transfer → withdraw lifecycle. The frontend and proxy are optional — the protocol is fully usable from the command line. Running locally (with `SP1_PROVER=cpu`) keeps all private inputs on the user's machine, minimizing trust and maximizing privacy. See the root README's "Proving Architecture & Trust Model" section for details.
+
 ## What It Does
 
 The E2E script (`script/src/bin/e2e.rs`) runs 12 steps:
